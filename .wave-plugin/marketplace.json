@@ -13,6 +13,11 @@
       "name": "document-skills",
       "description": "Collection of document processing suite including Excel, Word, PowerPoint, and PDF capabilities",
       "source": "./plugins/document-skills"
+    },
+    {
+      "name": "typescript-lsp",
+      "description": "TypeScript/JavaScript language server for enhanced code intelligence",
+      "source": "./plugins/typescript-lsp"
     }
   ]
 }
