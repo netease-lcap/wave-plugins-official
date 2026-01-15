@@ -8,6 +8,11 @@
       "name": "commit-commands",
       "description": "Commands for git commit workflows including commit, push, and PR creation",
       "source": "./plugins/commit-commands"
+    },
+    {
+      "name": "document-skills",
+      "description": "Collection of document processing suite including Excel, Word, PowerPoint, and PDF capabilities",
+      "source": "./plugins/document-skills"
     }
   ]
 }
