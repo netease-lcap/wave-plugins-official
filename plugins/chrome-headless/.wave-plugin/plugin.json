@@ -1,0 +1,5 @@
+{
+  "name": "chrome-headless",
+  "description": "Chrome DevTools Protocol MCP server for headless browser automation",
+  "version": "1.0.0"
+}

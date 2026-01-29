@@ -18,6 +18,11 @@
       "name": "typescript-lsp",
       "description": "TypeScript/JavaScript language server for enhanced code intelligence",
       "source": "./plugins/typescript-lsp"
+    },
+    {
+      "name": "chrome-headless",
+      "description": "Chrome DevTools Protocol MCP server for headless browser automation",
+      "source": "./plugins/chrome-headless"
     }
   ]
 }
