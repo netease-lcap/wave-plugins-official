@@ -225,10 +225,6 @@ python scripts/create-new-feature.py --short-name "自定义名" "功能描述"
 
 插件会优先使用项目根目录的模板。
 
-### 环境变量
-
-脚本会设置 `SPECIFY_FEATURE` 环境变量，包含当前功能分支名称。
-
 ## 需求
 
 - Python 3.6+ （用于运行脚本）
