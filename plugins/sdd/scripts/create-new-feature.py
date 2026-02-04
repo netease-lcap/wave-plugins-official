@@ -192,9 +192,13 @@ def main():
         print(f"[sdd] 警告: 未检测到 Git 仓库; 跳过为 {branch_name} 创建分支",
               file=sys.stderr)
     
-    # 创建功能目录
+    # 创建功能目录和子目录
     feature_dir = specs_dir / branch_name
     feature_dir.mkdir(exist_ok=True)
+    
+    # 创建 checklists 子目录
+    checklists_dir = feature_dir / "checklists"
+    checklists_dir.mkdir(exist_ok=True)
     
     # 查找并复制模板
     plugin_dir = script_dir.parent
