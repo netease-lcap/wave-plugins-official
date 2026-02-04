@@ -23,6 +23,11 @@
       "name": "chrome-headless",
       "description": "Chrome DevTools Protocol MCP server for headless browser automation",
       "source": "./plugins/chrome-headless"
+    },
+    {
+      "name": "sdd",
+      "description": "规格驱动开发工作流，用于创建和管理技术规格文档",
+      "source": "./plugins/sdd"
     }
   ]
 }
