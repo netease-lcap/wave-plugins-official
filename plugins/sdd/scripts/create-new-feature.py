@@ -12,16 +12,6 @@ import argparse
 from pathlib import Path
 
 
-def find_repo_root(start_dir):
-    """通过搜索项目标记来查找仓库根目录"""
-    current = Path(start_dir).resolve()
-    while current != current.parent:
-        if (current / ".git").exists() or (current / ".wave").exists():
-            return current
-        current = current.parent
-    return None
-
-
 def get_highest_spec_number(specs_dir):
     """获取 specs 目录中最高的编号"""
     if not specs_dir.exists():
@@ -98,15 +88,9 @@ def main():
         print("错误: 必须提供功能描述", file=sys.stderr)
         sys.exit(1)
     
-    # 确定仓库根目录
+    # 确定仓库根目录：永远指向当前工作目录
+    repo_root = Path.cwd()
     script_dir = Path(__file__).parent.resolve()
-    repo_root = find_repo_root(script_dir)
-    
-    if not repo_root:
-        print("错误: 无法确定仓库根目录。请从仓库内运行此脚本。", file=sys.stderr)
-        sys.exit(1)
-    
-    os.chdir(repo_root)
     
     # 创建 specs 目录
     specs_dir = repo_root / "specs"
