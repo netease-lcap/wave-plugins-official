@@ -58,7 +58,7 @@ $ARGUMENTS
    - JSON 在终端中作为输出提供 - 始终参考它以获取你要查找的实际内容
 
 4. **加载模板**:
-   - 优先检查当前项目目录下是否存在 `.wave/templates/spec-template.md`。
+   - 优先检查当前项目目录下是否存在 `sdd/templates/spec-template.md`。
    - 如果存在，加载该文件作为模板。
    - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/spec-template.md`。
    - 了解所需的部分。
@@ -94,7 +94,7 @@ $ARGUMENTS
 7. **规格说明质量验证**：写入初始规格说明后，根据质量标准验证它：
 
    a. **加载检查清单模板**:
-      - 优先检查当前项目目录下是否存在 `.wave/templates/requirements-template.md`。
+      - 优先检查当前项目目录下是否存在 `sdd/templates/requirements-template.md`。
       - 如果存在，加载该文件作为模板。
       - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/requirements-template.md`。
 
