@@ -2,6 +2,14 @@
 description: 更新项目级的 Spec 模板
 ---
 
+## 用户输入
+
+```text
+$ARGUMENTS
+```
+
+你**必须**在继续之前考虑用户输入（如果不为空）。
+
 ## 概述
 
 此命令将默认的 Spec 模板复制到当前项目的 `.wave/templates/spec-template.md`，并允许用户根据需要进行修改。
