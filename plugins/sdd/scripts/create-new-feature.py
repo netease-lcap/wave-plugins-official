@@ -122,8 +122,8 @@ def main():
     # 查找并复制模板
     plugin_dir = script_dir.parent
     template_paths = [
-        plugin_dir / "templates" / "spec-template.md",
-        repo_root / ".specify" / "templates" / "spec-template.md"
+        repo_root / "sdd" / "templates" / "spec-template.md",
+        plugin_dir / "templates" / "spec-template.md"
     ]
     
     spec_file = feature_dir / "spec.md"
