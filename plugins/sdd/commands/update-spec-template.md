@@ -25,8 +25,8 @@ $ARGUMENTS
    - 如果目标文件已存在，询问用户是否覆盖。
 
 3. **用户修改**:
-   - 询问用户是否需要对模板进行特定的修改。
-   - 如果用户提供了修改建议，根据建议更新 `sdd/templates/spec-template.md`。
+   - 如果用户提供了修改建议（即用户输入不为空），根据建议更新 `sdd/templates/spec-template.md`。
+   - 否则，询问用户是否需要对模板进行特定的修改，并根据建议更新 `sdd/templates/spec-template.md`。
 
 4. **完成**:
    - 告知用户模板已更新，并且今后 `/code2spec` 命令将优先使用此项目级模板。
