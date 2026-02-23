@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git branch -v), Bash(git worktree list), Bash(awk '{print $1}'), Bash(xargs -I {} git -C {} fetch --prune --all)
+allowed-tools: Bash(git branch -v), Bash(git worktree list), Bash(git fetch --prune --all)
 description: Cleans up all git branches marked as [gone] (branches that have been deleted on the remote but still exist locally), including removing associated worktrees.
 ---
 
@@ -9,10 +9,10 @@ You need to execute the following bash commands to clean up stale local branches
 
 ## Commands to Execute
 
-1. **First, prune remote tracking branches in all worktrees**
+1. **First, prune remote tracking branches**
    Execute this command:
    ```bash
-   git worktree list | awk '{print $1}' | xargs -I {} git -C {} fetch --prune --all
+   git fetch --prune --all
    ```
 
 2. **Next, list branches to identify any with [gone] status**
@@ -51,7 +51,7 @@ You need to execute the following bash commands to clean up stale local branches
 
 After executing these commands, you will:
 
-- Prune remote tracking branches in all worktrees to ensure remote refs are up-to-date
+- Prune remote tracking branches to ensure remote refs are up-to-date
 - See a list of all local branches with their status
 - Identify and remove any worktrees associated with [gone] branches
 - Delete all branches marked as [gone]
