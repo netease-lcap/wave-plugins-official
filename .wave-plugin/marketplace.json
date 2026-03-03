@@ -23,6 +23,11 @@
       "name": "sdd",
       "description": "规格驱动开发工作流，用于创建和管理技术规格文档",
       "source": "./plugins/sdd"
+    },
+    {
+      "name": "git-workflow",
+      "description": "Streamlined git workflow skills for committing, pushing, and creating pull requests",
+      "source": "./plugins/git-workflow"
     }
   ]
 }
