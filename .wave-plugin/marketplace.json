@@ -25,9 +25,9 @@
       "source": "./plugins/sdd"
     },
     {
-      "name": "git-workflow",
+      "name": "commit-skills",
       "description": "Streamlined git workflow skills for committing, pushing, and creating pull requests",
-      "source": "./plugins/git-workflow"
+      "source": "./plugins/commit-skills"
     }
   ]
 }
