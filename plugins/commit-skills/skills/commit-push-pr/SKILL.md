@@ -11,6 +11,7 @@ allowed-tools:
   - Bash(git push*)
   - Bash(git commit*)
   - Bash(gh pr create*)
+  - Bash(gh pr view*)
 ---
 
 ## Context
