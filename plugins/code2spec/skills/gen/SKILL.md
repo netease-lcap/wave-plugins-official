@@ -1,7 +1,7 @@
 ---
 name: code2spec-gen
 description: 从现有代码生成功能规格说明文档。当用户想要分析现有代码并生成规格说明时使用。
-allowed-tools: [Bash, Read, Write, Glob, Grep, AskUserQuestion]
+allowed-tools: [Bash, Read, Write, Glob, Grep, LSP, AskUserQuestion]
 ---
 
 ## 用户输入
@@ -50,7 +50,7 @@ $ARGUMENTS
      - "创建分析仪表板" → "分析仪表板"
      - "修复支付处理超时错误" → "支付超时修复"
 
-3. 从仓库根目录运行脚本 `python ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.py --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 BRANCH_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
+3. 从仓库根目录运行脚本 `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 FEATURE_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
 
    **重要**:
    
