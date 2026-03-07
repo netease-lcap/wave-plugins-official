@@ -12,7 +12,7 @@ $ARGUMENTS
 
 ## 概述
 
-用户在 `/code2spec` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
+用户在 `/code2spec gen` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
 
 假设你在此对话中始终可以访问它，即使下面的 `$ARGUMENTS` 字面出现。除非他们提供了空命令，否则不要要求用户重复。
 
@@ -58,7 +58,7 @@ $ARGUMENTS
    - JSON 在终端中作为输出提供 - 始终参考它以获取你要查找的实际内容
 
 4. **加载模板**:
-   - 优先检查当前项目目录下是否存在 `sdd/templates/spec-template.md`。
+   - 优先检查当前项目目录下是否存在 `code2spec/templates/spec-template.md`。
    - 如果存在，加载该文件作为模板。
    - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/spec-template.md`。
    - 了解所需的部分。
@@ -94,7 +94,7 @@ $ARGUMENTS
 7. **规格说明质量验证**：写入初始规格说明后，根据质量标准验证它：
 
    a. **加载检查清单模板**:
-      - 优先检查当前项目目录下是否存在 `sdd/templates/requirements-template.md`。
+      - 优先检查当前项目目录下是否存在 `code2spec/templates/requirements-template.md`。
       - 如果存在，加载该文件作为模板。
       - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/requirements-template.md`。
 

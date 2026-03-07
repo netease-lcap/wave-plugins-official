@@ -122,7 +122,7 @@ def main():
     # 查找并复制模板
     plugin_dir = script_dir.parent
     template_paths = [
-        repo_root / "sdd" / "templates" / "spec-template.md",
+        repo_root / "code2spec" / "templates" / "spec-template.md",
         plugin_dir / "templates" / "spec-template.md"
     ]
     

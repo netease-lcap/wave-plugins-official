@@ -20,9 +20,9 @@
       "source": "./plugins/chrome-headless"
     },
     {
-      "name": "sdd",
-      "description": "规格驱动开发工作流，用于创建和管理技术规格文档",
-      "source": "./plugins/sdd"
+      "name": "code2spec",
+      "description": "从代码生成规格说明的工具集，用于创建和管理技术规格文档",
+      "source": "./plugins/code2spec"
     },
     {
       "name": "commit-skills",
