@@ -1,5 +1,7 @@
 ---
-description: 从现有代码生成功能规格说明文档
+name: code2spec-gen
+description: 从现有代码生成功能规格说明文档。当用户想要分析现有代码并生成规格说明时使用。
+allowed-tools: [Bash, Read, Write, Glob, Grep, AskUserQuestion]
 ---
 
 ## 用户输入
@@ -12,7 +14,7 @@ $ARGUMENTS
 
 ## 概述
 
-用户在 `/code2spec gen` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
+用户在 `/code2spec-gen` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
 
 假设你在此对话中始终可以访问它，即使下面的 `$ARGUMENTS` 字面出现。除非他们提供了空命令，否则不要要求用户重复。
 
@@ -48,7 +50,7 @@ $ARGUMENTS
      - "创建分析仪表板" → "分析仪表板"
      - "修复支付处理超时错误" → "支付超时修复"
 
-3. 从仓库根目录运行脚本 `python $WAVE_PLUGIN_ROOT/scripts/create-new-feature.py --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 BRANCH_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
+3. 从仓库根目录运行脚本 `python ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.py --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 BRANCH_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
 
    **重要**:
    
@@ -60,7 +62,7 @@ $ARGUMENTS
 4. **加载模板**:
    - 优先检查当前项目目录下是否存在 `code2spec/templates/spec-template.md`。
    - 如果存在，加载该文件作为模板。
-   - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/spec-template.md`。
+   - 如果不存在，加载 `${WAVE_SKILL_DIR}/../../templates/spec-template.md`。
    - 了解所需的部分。
 
 5. **探索和理解代码**:
@@ -96,7 +98,7 @@ $ARGUMENTS
    a. **加载检查清单模板**:
       - 优先检查当前项目目录下是否存在 `code2spec/templates/requirements-template.md`。
       - 如果存在，加载该文件作为模板。
-      - 如果不存在，加载 `$WAVE_PLUGIN_ROOT/templates/requirements-template.md`。
+      - 如果不存在，加载 `${WAVE_SKILL_DIR}/../../templates/requirements-checklist.md`。
 
    b. **创建规格说明质量检查清单**：在 `FEATURE_DIR/checklists/requirements.md` 生成检查清单文件，使用加载的模板，并将 `[功能名称]`、`[日期]` 和 `[spec.md 的链接]` 替换为实际值。
 
@@ -154,43 +156,3 @@ $ARGUMENTS
 8. 报告完成情况，包括分支名称、规格说明文件路径、检查清单结果以及下一阶段的准备情况（进一步完善或规划）。
 
 **注意**：脚本在写入之前创建并检出新分支并初始化规格说明文件。
-
-## 一般指南
-
-## 快速指南
-
-- 关注用户**需要什么**和**为什么**。
-- 避免如何实现（没有技术栈、API、代码结构）。
-- 为业务利益相关者编写，而不是开发人员。
-- 不要创建嵌入在规格说明中的任何检查清单。那将是一个单独的命令。
-
-### 部分要求
-
-- **必填部分**：每个功能都必须完成
-- **可选部分**：仅在与功能相关时包含
-- 当部分不适用时，完全删除它（不要留下 "N/A"）
-
-### 用于 AI 生成
-
-从代码创建此规格说明时：
-
-1. **做出明智的猜测**：使用上下文、行业标准和常见模式来填补空白
-2. **记录假设**：在假设部分记录合理的默认值
-3. **限制明确**：最多 3 个 [需要明确] 标记 - 仅用于关键决策：
-   - 显著影响功能范围或用户体验
-   - 有多种具有不同含义的合理解释
-   - 缺乏任何合理的默认值
-4. **优先级明确**：范围 > 安全/隐私 > 用户体验 > 技术细节
-5. **像测试人员一样思考**：每个模糊的需求都应该无法通过 "可测试和明确" 的检查清单项
-6. **需要明确的常见领域**（仅在没有合理默认值时）：
-   - 功能范围和边界（包括/排除特定用例）
-   - 用户类型和权限（如果可能有多种相互冲突的解释）
-   - 安全/合规要求（当在法律/财务上重要时）
-   
-**合理默认值示例**（不要询问这些）：
-
-- 数据保留：该领域的行业标准做法
-- 性能目标：标准 Web/移动应用期望，除非另有说明
-- 错误处理：用户友好的消息和适当的回退
-- 认证方法：对于 Web 应用，标准的基于会话或 OAuth2
-- 集成模式：RESTful API，除非另有说明

@@ -1,5 +1,7 @@
 ---
-description: 更新项目级的 Spec 模板
+name: code2spec-update-spec-template
+description: 更新项目级的 Spec 模板。
+allowed-tools: [Bash, Read, Write]
 ---
 
 ## 用户输入
@@ -21,7 +23,7 @@ $ARGUMENTS
    - 如果不存在，则创建它。
 
 2. **复制模板**:
-   - 将 `$WAVE_PLUGIN_ROOT/templates/spec-template.md` 复制到当前项目的 `code2spec/templates/spec-template.md`。
+   - 将 `${WAVE_SKILL_DIR}/../../templates/spec-template.md` 复制到当前项目的 `code2spec/templates/spec-template.md`。
    - 如果目标文件已存在，询问用户是否覆盖。
 
 3. **用户修改**:
@@ -29,4 +31,4 @@ $ARGUMENTS
    - 否则，询问用户是否需要对模板进行特定的修改，并根据建议更新 `code2spec/templates/spec-template.md`。
 
 4. **完成**:
-   - 告知用户模板已更新，并且今后 `/code2spec gen` 命令将优先使用此项目级模板。
+   - 告知用户模板已更新，并且今后 `/code2spec-gen` 命令将优先使用此项目级模板。

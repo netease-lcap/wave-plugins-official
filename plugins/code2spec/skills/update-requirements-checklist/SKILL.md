@@ -1,5 +1,7 @@
 ---
-description: 更新需求质量检查清单
+name: code2spec-update-requirements-checklist
+description: 更新项目级的需求质量检查清单模板。
+allowed-tools: [Bash, Read, Write]
 ---
 
 ## 用户输入
@@ -21,7 +23,7 @@ $ARGUMENTS
    - 如果不存在，则创建它。
 
 2. **复制检查清单**:
-   - 将 `$WAVE_PLUGIN_ROOT/templates/requirements-checklist.md` 复制到当前项目的 `code2spec/templates/requirements-checklist.md`。
+   - 将 `${WAVE_SKILL_DIR}/../../templates/requirements-checklist.md` 复制到当前项目的 `code2spec/templates/requirements-checklist.md`。
    - 如果目标文件已存在，询问用户是否覆盖。
 
 3. **用户修改**:
