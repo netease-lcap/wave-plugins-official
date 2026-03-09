@@ -28,6 +28,11 @@
       "name": "commit-skills",
       "description": "Streamlined git workflow skills for committing, pushing, and creating pull requests",
       "source": "./plugins/commit-skills"
+    },
+    {
+      "name": "skill-creator",
+      "description": "A plugin to help create other skills",
+      "source": "./plugins/skill-creator"
     }
   ]
 }
