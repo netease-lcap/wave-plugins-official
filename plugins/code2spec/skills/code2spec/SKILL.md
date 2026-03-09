@@ -1,5 +1,5 @@
 ---
-name: code2spec-gen
+name: code2spec
 description: 从现有代码生成功能规格说明文档。当用户想要分析现有代码并生成规格说明时使用。
 allowed-tools: [Bash, Read, Write, Glob, Grep, LSP, AskUserQuestion]
 ---
@@ -14,7 +14,7 @@ $ARGUMENTS
 
 ## 概述
 
-用户在 `/code2spec-gen` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
+用户在 `/code2spec` 后输入的文本**应该是**功能模块的描述（如："用户认证模块"）。可选地，用户可以提供代码的具体范围（如："src/auth 目录"）。
 
 假设你在此对话中始终可以访问它，即使下面的 `$ARGUMENTS` 字面出现。除非他们提供了空命令，否则不要要求用户重复。
 
@@ -50,7 +50,7 @@ $ARGUMENTS
      - "创建分析仪表板" → "分析仪表板"
      - "修复支付处理超时错误" → "支付超时修复"
 
-3. 从仓库根目录运行脚本 `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 FEATURE_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
+3. 从仓库根目录运行脚本 `node ${WAVE_SKILL_DIR}/scripts/create-new-feature.mjs --json "$ARGUMENTS" --short-name "your-generated-short-name"` 并解析其 JSON 输出以获取 FEATURE_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
 
    **重要**:
    
@@ -62,7 +62,7 @@ $ARGUMENTS
 4. **加载模板**:
    - 优先检查当前项目目录下是否存在 `code2spec/templates/spec-template.md`。
    - 如果存在，加载该文件作为模板。
-   - 如果不存在，加载 `${WAVE_SKILL_DIR}/../../templates/spec-template.md`。
+   - 如果不存在，加载 `${WAVE_SKILL_DIR}/templates/spec-template.md`。
    - 了解所需的部分。
 
 5. **探索和理解代码**:
@@ -96,9 +96,9 @@ $ARGUMENTS
 7. **规格说明质量验证**：写入初始规格说明后，根据质量标准验证它：
 
    a. **加载检查清单模板**:
-      - 优先检查当前项目目录下是否存在 `code2spec/templates/requirements-template.md`。
+      - 优先检查当前项目目录下是否存在 `code2spec/templates/requirements-checklist.md`。
       - 如果存在，加载该文件作为模板。
-      - 如果不存在，加载 `${WAVE_SKILL_DIR}/../../templates/requirements-checklist.md`。
+      - 如果不存在，加载 `${WAVE_SKILL_DIR}/templates/requirements-checklist.md`。
 
    b. **创建规格说明质量检查清单**：在 `FEATURE_DIR/checklists/requirements.md` 生成检查清单文件，使用加载的模板，并将 `[功能名称]`、`[日期]` 和 `[spec.md 的链接]` 替换为实际值。
 
