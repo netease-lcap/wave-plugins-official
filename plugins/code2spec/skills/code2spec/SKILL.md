@@ -96,9 +96,7 @@ $ARGUMENTS
 7. **规格说明质量验证**：写入初始规格说明后，根据质量标准验证它：
 
    a. **加载检查清单模板**:
-      - 优先检查当前项目目录下是否存在 `code2spec/templates/requirements-checklist.md`。
-      - 如果存在，加载该文件作为模板。
-      - 如果不存在，加载 `${WAVE_SKILL_DIR}/templates/requirements-checklist.md`。
+      - 模板路径: !`node -e "console.log(require('fs').existsSync('code2spec/templates/requirements-checklist.md') ? require('path').resolve('code2spec/templates/requirements-checklist.md') : '${WAVE_SKILL_DIR}/templates/requirements-checklist.md')"`
 
    b. **创建规格说明质量检查清单**：在 `FEATURE_DIR/checklists/requirements.md` 生成检查清单文件，使用加载的模板，并将 `[功能名称]`、`[日期]` 和 `[spec.md 的链接]` 替换为实际值。
 
