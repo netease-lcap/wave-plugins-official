@@ -1,7 +1,8 @@
 ---
 name: code2spec
 description: 从现有代码生成功能规格说明文档。当用户想要分析现有代码并生成规格说明时使用。
-allowed-tools: [Bash, Read, Write, Glob, Grep, LSP, AskUserQuestion]
+allowed-tools:
+  - Bash(node */create-new-feature.mjs*)
 ---
 
 ## 用户输入
