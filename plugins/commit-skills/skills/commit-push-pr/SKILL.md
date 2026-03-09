@@ -1,8 +1,7 @@
 ---
 name: commit-push-pr
 description: Commit, push, and open a PR
-context: fork
-user-invocable: false
+disable-model-invocation: true
 allowed-tools:
   - Bash(git checkout --branch*)
   - Bash(git checkout -b*)
