@@ -23,7 +23,7 @@ $ARGUMENTS
    - 如果不存在，则创建它。
 
 2. **复制检查清单**:
-   - 将 `${WAVE_SKILL_DIR}/../../templates/requirements-checklist.md` 复制到当前项目的 `code2spec/templates/requirements-checklist.md`。
+   - 将 `${WAVE_SKILL_DIR}/../code2spec/templates/requirements-checklist.md` 复制到当前项目的 `code2spec/templates/requirements-checklist.md`。
    - 如果目标文件已存在，询问用户是否覆盖。
 
 3. **用户修改**:
