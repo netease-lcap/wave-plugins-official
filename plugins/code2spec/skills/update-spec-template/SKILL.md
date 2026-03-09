@@ -1,5 +1,5 @@
 ---
-name: code2spec-update-spec-template
+name: update-spec-template
 description: 更新项目级的 Spec 模板。
 allowed-tools: [Bash, Read, Write]
 ---

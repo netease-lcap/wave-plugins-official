@@ -1,5 +1,5 @@
 ---
-name: code2spec-update-requirements-checklist
+name: update-requirements-checklist
 description: 更新项目级的需求质量检查清单模板。
 allowed-tools: [Bash, Read, Write]
 ---
