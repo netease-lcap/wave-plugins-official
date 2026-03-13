@@ -28,5 +28,5 @@ Based on the above changes:
 1. Create a new branch if on main
 2. Create a single commit with an appropriate message
 3. Push the branch to origin with upstream set (e.g., `git push -u origin <branch-name>`)
-4. Create a merge request using `glab mr create`. The MR title and description MUST reflect all commits in the branch (refer to "Commit messages diff with main" in the context). Use `--fill` or specify `-t` (title) and `-d` (description) explicitly.
+4. Create a merge request using `glab mr create`. The MR title and description MUST reflect all commits in the branch (refer to "Commit messages diff with main" in the context). Use `--fill -y` or specify `-t` (title), `-d` (description), and `-y` explicitly.
 5. You have the capability to call multiple tools in a single response. You MUST do all of the above in a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
