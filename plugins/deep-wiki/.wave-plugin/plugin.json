@@ -1,5 +1,5 @@
 {
   "name": "deep-wiki",
-  "description": "AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南、AGENTS.md 和 llms.txt",
+  "description": "AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南和 AGENTS.md",
   "version": "1.0.0"
 }
