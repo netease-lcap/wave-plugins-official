@@ -3,8 +3,8 @@ name: watch-merge-pr
 description: Watch PR checks and merge when successful
 disable-model-invocation: true
 allowed-tools:
-  - Bash(gh pr checks --watch)
-  - Bash(gh pr merge --rebase)
+  - Bash(gh pr checks*)
+  - Bash(gh pr merge*)
 ---
 
 ## Context
