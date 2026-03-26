@@ -3,7 +3,8 @@ name: watch-merge-pr
 description: Watch PR checks and merge when successful
 disable-model-invocation: true
 allowed-tools:
-  - Bash(gh pr checks --watch && gh pr merge --rebase)
+  - Bash(gh pr checks --watch)
+  - Bash(gh pr merge --rebase)
 ---
 
 ## Context
@@ -14,8 +15,7 @@ allowed-tools:
 
 Watch the current PR checks and merge it with rebase once they pass:
 
-```bash
-gh pr checks --watch && gh pr merge --rebase
-```
+1. Watch checks: `gh pr checks --watch`
+2. Merge: `gh pr merge --rebase`
 
-You have the capability to call multiple tools in a single response. Execute the command using a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
+You have the capability to call multiple tools in a single response. Execute the commands using a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
