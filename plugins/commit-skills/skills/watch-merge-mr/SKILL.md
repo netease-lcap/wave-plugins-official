@@ -4,6 +4,7 @@ description: Watch MR pipeline and merge when successful
 disable-model-invocation: true
 allowed-tools:
   - Bash(node */watch-merge-mr.mjs*)
+  - Bash(glab mr view *)
 ---
 
 ## Context
