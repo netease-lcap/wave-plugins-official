@@ -1,6 +1,7 @@
 ---
 name: checklist
 description: Generate a custom checklist for the current feature based on user requirements.
+disable-model-invocation: true
 allowed-tools:
   - Bash(node */check-prerequisites.mjs*)
 ---
