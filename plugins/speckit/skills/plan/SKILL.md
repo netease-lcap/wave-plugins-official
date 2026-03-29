@@ -1,6 +1,7 @@
 ---
 name: plan
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+disable-model-invocation: true
 allowed-tools:
   - Bash(node */setup-plan.mjs*)
 ---

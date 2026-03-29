@@ -1,6 +1,7 @@
 ---
 name: constitution
 description: Create or update the project constitution to define core principles and non-negotiable rules for the project.
+disable-model-invocation: true
 ---
 
 ## User Input
