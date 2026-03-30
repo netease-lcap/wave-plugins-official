@@ -72,5 +72,6 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Key rules
 
+- All planning phases MUST be performed using the **general-purpose agent** to ensure technical accuracy and codebase alignment.
 - Use absolute paths
 - ERROR on gate failures or unresolved clarifications
