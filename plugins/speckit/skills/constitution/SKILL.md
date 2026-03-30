@@ -14,13 +14,12 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-You are creating or updating the project constitution at `.specify/memory/constitution.md`. This document defines the core principles, technical standards, and non-negotiable rules for the project.
+You are creating or updating the project constitution at !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : '.specify/memory/constitution.md')"`. This document defines the core principles, technical standards, and non-negotiable rules for the project.
 
 Follow this execution flow:
 
 1. **Load or Initialize**:
-   - Load the existing constitution at `.specify/memory/constitution.md`.
-   - If it doesn't exist, load the default template from `${WAVE_SKILL_DIR}/../../memory/constitution.md`.
+   - Load the constitution from !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : '${WAVE_SKILL_DIR}/../../memory/constitution.md')"`.
    - Identify placeholders like `[PROJECT_NAME]`, `[PRINCIPLE_NAME]`, etc.
 
 2. **Collect Principles**:
@@ -39,7 +38,7 @@ Follow this execution flow:
 
 5. **Finalize**:
    - Update the version and dates (ISO format YYYY-MM-DD).
-   - Write the completed constitution to `.specify/memory/constitution.md`.
+   - Write the completed constitution to !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : '.specify/memory/constitution.md')"`.
    - Provide a summary of changes and a suggested commit message.
 
 ## Principles Guidelines
