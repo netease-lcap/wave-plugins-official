@@ -5,6 +5,10 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(node */watch-merge-mr.mjs*)
   - Bash(glab mr view *)
+  - Bash(glab ci status*)
+  - Bash(glab ci get*)
+  - Bash(glab ci trace *)
+  - Bash(glab pipeline ci view *)
 ---
 
 ## Context
