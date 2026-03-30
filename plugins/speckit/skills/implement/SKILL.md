@@ -108,6 +108,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
 7. Implementation execution rules:
+   - **MUST task subagents (e.g., general-purpose agent) to implement tasks to reduce context costs of the main agent**
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints

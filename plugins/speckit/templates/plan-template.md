@@ -32,6 +32,7 @@
 [Gates determined based on constitution file]
 
 **REQUIRED**: All planning phases MUST align with the project constitution. All implementation tasks SHOULD be clearly defined and testable.
+- All planning phases MUST be performed using the **general-purpose agent** to reduce context costs of the main agent.
 
 ## Project Structure
 

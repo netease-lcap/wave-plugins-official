@@ -174,8 +174,12 @@ Examples of foundational tasks (adjust based on your project):
 - Story complete before moving to next priority
 
 ---
-
 ## Implementation Strategy
+
+### Task Delegation (CRITICAL)
+Tasks in this file MUST be delegated to subagents to reduce context costs of the main agent.
+- Use `Explore` for codebase research.
+- Use `general-purpose` for implementation tasks.
 
 ### MVP First (User Story 1 Only)
 
