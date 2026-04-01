@@ -5,6 +5,8 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(gh pr checks*)
   - Bash(gh pr merge*)
+  - Bash(gh run list*)
+  - Bash(gh run view*)
 ---
 
 ## Context
