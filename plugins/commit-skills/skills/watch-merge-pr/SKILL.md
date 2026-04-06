@@ -23,4 +23,6 @@ If "PR checks count" is 0, you should skip `gh pr checks --watch` and merge dire
 1. Watch checks (if count > 0): `gh pr checks --watch`
 2. Merge: `gh pr merge --rebase`
 
-You have the capability to call multiple tools in a single response. Execute the commands using a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
+IMPORTANT: Sequential bash commands that depend on each other (e.g., `gh pr checks --watch` → `gh pr merge --rebase`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call.
+
+Execute the commands. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
