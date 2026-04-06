@@ -38,4 +38,6 @@ Based on the above changes, create a single git commit:
 git commit -m "Commit message here."
 ```
 
-You have the capability to call multiple tools in a single response. Stage and create the commit using a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
+IMPORTANT: Sequential bash commands that depend on each other (e.g., `git add` → `git commit`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call (e.g., `git add . && git commit -m "msg"`).
+
+Stage and create the commit. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.

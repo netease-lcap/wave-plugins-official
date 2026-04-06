@@ -30,4 +30,5 @@ Based on the above changes:
 2. Create a single commit with an appropriate message
 3. Push the branch to origin with upstream set (e.g., `git push -u origin <branch-name>`)
 4. Create a pull request using `gh pr create`. The PR title and body MUST reflect all commits in the branch (refer to "Commit messages diff with main" in the context). Use `--fill` or specify `-t` (title) and `-b` (body) explicitly.
-5. You have the capability to call multiple tools in a single response. You MUST do all of the above in a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
+5. IMPORTANT: Sequential bash commands that depend on each other (e.g., `git add` → `git commit` → `git push`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call (e.g., `git add . && git commit -m "msg" && git push -u origin branch`).
+6. Complete all the above steps. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
