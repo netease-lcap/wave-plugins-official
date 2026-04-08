@@ -17,9 +17,13 @@ async function watchAndMerge() {
     const timestamp = new Date().toLocaleTimeString();
     console.log(`${timestamp} - Pipeline: ${status}`);
 
-    if (status === 'success') {
+    if (status === 'success' || status === undefined || status === null) {
       try {
-        console.log('Pipeline success! Merging MR...');
+        if (status === undefined || status === null) {
+          console.log('No pipeline found, merging MR directly...');
+        } else {
+          console.log('Pipeline success! Merging MR...');
+        }
         execSync(`glab mr merge ${mrId} --yes --remove-source-branch`, { stdio: 'inherit' });
         break;
       } catch (error) {
