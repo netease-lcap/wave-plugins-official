@@ -43,7 +43,7 @@ Given that feature description, do this:
    - You must only ever run this script once
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
 
-3. Load `${WAVE_SKILL_DIR}/../../templates/spec-template.md` to understand required sections.
+3. Load !`node -e "console.log(require('fs').existsSync('.specify/templates/spec-template.md') ? require('path').resolve('.specify/templates/spec-template.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../templates/spec-template.md'))"` to understand required sections.
 
 4. Follow this execution flow:
 
