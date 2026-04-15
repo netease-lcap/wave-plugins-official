@@ -33,6 +33,7 @@
 
 **REQUIRED**: All planning phases MUST align with the project constitution. All implementation tasks SHOULD be clearly defined and testable.
 - All planning phases MUST be performed using the **general-purpose agent** to reduce context costs of the main agent.
+- **Concurrency Rule**: For agent delegation to be truly concurrent, ALL parallel subagents MUST be launched in the **same tool_calls block**. Launching subagents in separate tool_calls blocks will cause them to run sequentially.
 
 ## Project Structure
 
