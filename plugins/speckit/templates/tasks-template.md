@@ -181,7 +181,6 @@ Tasks in this file MUST be delegated to subagents to reduce context costs of the
 - Use `Explore` for codebase research.
 - Use `general-purpose` for implementation tasks.
 - **Prompt Design**: Keep subagent prompts minimal — point to this `tasks.md` file path and the specific task ID/line number, plus the feature's plan.md context. Do NOT copy full task descriptions into the prompt; let the subagent read tasks.md directly.
-- **Concurrency Rule**: For agent delegation to be truly concurrent, ALL parallel subagents MUST be launched in the **same tool_calls block**. Launching subagents in separate tool_calls blocks will cause them to run sequentially. Group all parallel tasks marked [P] into a single tool call with multiple subagent delegations.
 
 ### MVP First (User Story 1 Only)
 

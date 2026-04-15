@@ -40,8 +40,6 @@ You **MUST** consider the user input before proceeding (if not empty).
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
-   - For agent delegation to be truly concurrent, ALL parallel subagents MUST be launched in the **same tool_calls block**.
-   - Dispatch independent research tasks together:
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
