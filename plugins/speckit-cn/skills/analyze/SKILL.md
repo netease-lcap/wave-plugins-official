@@ -22,7 +22,7 @@ $ARGUMENTS
 
 **严格只读**：不要修改任何文件。输出结构化分析报告。提供可选的修复计划（用户必须在手动调用任何后续编辑命令之前明确批准）。
 
-**宪章权威**：项目宪章（!`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : '${WAVE_SKILL_DIR}/../../memory/constitution.md')"`）在此分析范围内是**不可协商的**。宪章冲突自动为关键，需要调整规格、计划或任务——而不是稀释、重新解释或静默忽略原则。如果原则本身需要更改，必须在 `/analyze` 之外的单独、明确的宪章更新中进行。
+**宪章权威**：项目宪章（!`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"`）在此分析范围内是**不可协商的**。宪章冲突自动为关键，需要调整规格、计划或任务——而不是稀释、重新解释或静默忽略原则。如果原则本身需要更改，必须在 `/analyze` 之外的单独、明确的宪章更新中进行。
 
 ## 执行步骤
 
@@ -66,7 +66,7 @@ $ARGUMENTS
 
 **从宪章：**
 
-- 加载 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : '${WAVE_SKILL_DIR}/../../memory/constitution.md')"` 用于原则验证
+- 加载 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"` 用于原则验证
 
 ### 3. 构建语义模型
 
