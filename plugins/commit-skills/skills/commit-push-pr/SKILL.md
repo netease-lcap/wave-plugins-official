@@ -7,6 +7,7 @@ allowed-tools:
   - Bash(git checkout -b*)
   - Bash(git add*)
   - Bash(git status*)
+  - Bash(git fetch*)
   - Bash(git push*)
   - Bash(git commit*)
   - Bash(gh pr create*)
