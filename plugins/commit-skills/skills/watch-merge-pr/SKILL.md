@@ -21,7 +21,7 @@ Watch the current PR checks and merge it with rebase once they pass.
 If "PR checks count" is 0, you should skip `gh pr checks --watch` and merge directly.
 
 1. Watch checks (if count > 0): `gh pr checks --watch`
-2. Merge: `gh pr merge --rebase`
+2. Merge: `gh pr merge --rebase` (do NOT add --delete-branch, it fails in worktrees)
 
 IMPORTANT: Sequential bash commands that depend on each other (e.g., `gh pr checks --watch` → `gh pr merge --rebase`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call.
 
