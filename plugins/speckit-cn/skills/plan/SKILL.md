@@ -28,7 +28,7 @@ $ARGUMENTS
    - 阶段 1：生成 data-model.md、contracts/、quickstart.md
    - 设计后重新评估宪章检查
 
-4. **停止并报告**：命令在阶段 2 规划后结束。报告分支、IMPL_PLAN 路径和生成的产物。
+4. **停止并报告**：命令在阶段 2 规划后结束。**不要生成 tasks.md** — 这是 `/tasks` 技能的职责。报告分支、IMPL_PLAN 路径和生成的产物。
 
 ## 阶段
 
