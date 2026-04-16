@@ -28,7 +28,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 1: Generate data-model.md, contracts/, quickstart.md
    - Re-evaluate Constitution Check post-design
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
+4. **Stop and report**: Command ends after Phase 2 planning. **Do NOT generate tasks.md** — that is the responsibility of the `/tasks` skill. Report branch, IMPL_PLAN path, and generated artifacts.
 
 ## Phases
 
