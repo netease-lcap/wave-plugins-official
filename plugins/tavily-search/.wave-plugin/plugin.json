@@ -1,0 +1,5 @@
+{
+  "name": "tavily-search",
+  "description": "Tavily AI-powered search MCP server for web search capabilities",
+  "version": "1.0.0"
+}
