@@ -24,8 +24,8 @@ $ARGUMENTS
 
 1. **检查并初始化目录**：
    - 确保 `.code2spec/templates/` 目录存在，不存在则创建。
-   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/requirements-checklist.md') ? require('path').resolve('.code2spec/templates/requirements-checklist.md') : '${WAVE_SKILL_DIR}/../code2spec/templates/requirements-checklist.md')"` 确定检查清单的来源路径。
-   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/spec-template.md') ? require('path').resolve('.code2spec/templates/spec-template.md') : '${WAVE_SKILL_DIR}/../code2spec/templates/spec-template.md')"` 确定 Spec 模板的来源路径。
+   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/requirements-checklist.md') ? require('path').resolve('.code2spec/templates/requirements-checklist.md') : require('path').resolve('${WAVE_SKILL_DIR}/../code2spec/templates/requirements-checklist.md'))"` 确定检查清单的来源路径。
+   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/spec-template.md') ? require('path').resolve('.code2spec/templates/spec-template.md') : require('path').resolve('${WAVE_SKILL_DIR}/../code2spec/templates/spec-template.md'))"` 确定 Spec 模板的来源路径。
 
 2. **初始化缺失的模板**：
    - 逐一检查 `.code2spec/templates/requirements-checklist.md` 和 `.code2spec/templates/spec-template.md` 是否存在。

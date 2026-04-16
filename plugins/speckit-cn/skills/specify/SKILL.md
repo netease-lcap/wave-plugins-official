@@ -43,7 +43,7 @@ $ARGUMENTS
    - 你只能运行此脚本一次
    - JSON 作为输出在终端中提供——始终参考它获取你需要的实际内容
 
-3. 加载 `${WAVE_SKILL_DIR}/../../templates/spec-template.md` 以了解必需的章节。
+3. 加载 !`node -e "console.log(require('path').resolve('${WAVE_SKILL_DIR}/../../templates/spec-template.md'))"` 以了解必需的章节。
 
 4. 按照此执行流程：
 
