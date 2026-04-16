@@ -181,6 +181,7 @@ Tasks in this file MUST be delegated to subagents to reduce context costs of the
 - Use `Explore` for codebase research.
 - Use `general-purpose` for implementation tasks.
 - **Delegate by Phase, Not by Individual Task**: Each phase (e.g., Phase 2: Foundational, Phase 3: User Story 1) is a single delegation unit. Do NOT delegate individual tasks — they are too small for a subagent. Launch each phase as one subagent with all its tasks together.
+- **Parallel Phases in Background**: When multiple phases have no dependencies on each other, launch their subagents in background simultaneously using `run_in_background: true`. Monitor and wait for all to complete before proceeding to dependent phases.
 - **Prompt Design**: Keep subagent prompts minimal — point to this `tasks.md` file path and the specific phase (e.g., "Complete Phase 2: Foundational"), plus the feature's plan.md context. Let the subagent read tasks.md directly to get all tasks within that phase.
 
 ### MVP First (User Story 1 Only)
