@@ -180,8 +180,7 @@ Examples of foundational tasks (adjust based on your project):
 Tasks in this file MUST be delegated to subagents to reduce context costs of the main agent.
 - Use `Explore` for codebase research.
 - Use `general-purpose` for implementation tasks.
-- **Delegate by Phase, Not by Individual Task**: Each phase (e.g., Phase 2: Foundational, Phase 3: User Story 1) is a single delegation unit. Do NOT delegate individual tasks — they are too small for a subagent. Launch each phase as one subagent with all its tasks together.
-- **Prompt Design**: Keep subagent prompts minimal — point to this `tasks.md` file path and the specific phase (e.g., "Complete Phase 2: Foundational"), plus the feature's plan.md context. Let the subagent read tasks.md directly to get all tasks within that phase.
+- **Prompt Design**: Keep subagent prompts minimal — point to this `tasks.md` file path and the specific task ID/line number, plus the feature's plan.md context. Do NOT copy full task descriptions into the prompt; let the subagent read tasks.md directly.
 
 ### MVP First (User Story 1 Only)
 
