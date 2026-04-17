@@ -32,18 +32,18 @@ $ARGUMENTS
      - "创建分析仪表板" → "analytics-dashboard"
      - "修复支付处理超时错误" → "fix-payment-timeout"
 
-2. 从仓库根目录运行脚本 `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS"` **带上短名称参数**，并解析其 JSON 输出获取 BRANCH_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
+2. 从仓库根目录运行脚本 `node ${WAVE_PLUGIN_ROOT}/scripts/create-new-feature.mjs --json "$ARGUMENTS"` **带上短名称参数**，并解析其 JSON 输出获取 BRANCH_NAME 和 SPEC_FILE。所有文件路径必须是绝对路径。
 
    **重要**：
 
-   - 将你在步骤 1 中创建的 2-4 个词的短名称追加到 `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS"` 命令中
+   - 将你在步骤 1 中创建的 2-4 个词的短名称追加到 `node ${WAVE_PLUGIN_ROOT}/scripts/create-new-feature.mjs --json "$ARGUMENTS"` 命令中
    - Bash：`--short-name "your-generated-short-name"`
    - PowerShell：`-ShortName "your-generated-short-name"`
    - 对于参数中的单引号如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或尽可能使用双引号："I'm Groot"）
    - 你只能运行此脚本一次
    - JSON 作为输出在终端中提供——始终参考它获取你需要的实际内容
 
-3. 加载 !`node -e "console.log(require('path').resolve('${WAVE_SKILL_DIR}/../../templates/spec-template.md'))"` 以了解必需的章节。
+3. 加载 !`node -e "console.log(require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/spec-template.md'))"` 以了解必需的章节。
 
 4. 按照此执行流程：
 

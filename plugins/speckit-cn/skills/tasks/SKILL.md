@@ -16,7 +16,7 @@ $ARGUMENTS
 
 ## 大纲
 
-1. **设置**：从仓库根目录运行 `node ${WAVE_SKILL_DIR}/../../scripts/check-prerequisites.mjs --json` 并解析 FEATURE_DIR 和 AVAILABLE_DOCS 列表。所有路径必须是绝对路径。对于参数中的单引号如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或尽可能使用双引号："I'm Groot"）。
+1. **设置**：从仓库根目录运行 `node ${WAVE_PLUGIN_ROOT}/scripts/check-prerequisites.mjs --json` 并解析 FEATURE_DIR 和 AVAILABLE_DOCS 列表。所有路径必须是绝对路径。对于参数中的单引号如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或尽可能使用双引号："I'm Groot"）。
 
 2. **加载设计文档**：从 FEATURE_DIR 读取：
    - **必需**：plan.md（技术栈、库、结构）、spec.md（带优先级的用户故事）
@@ -34,7 +34,7 @@ $ARGUMENTS
    - 创建每个用户故事的并行执行示例
    - 验证任务完整性（每个用户故事有所有需要的任务，独立可测试）
 
-4. **生成 tasks.md**：使用 `${WAVE_SKILL_DIR}/../../templates/tasks-template.md` 作为结构，填写：
+4. **生成 tasks.md**：使用 `${WAVE_PLUGIN_ROOT}/templates/tasks-template.md` 作为结构，填写：
    - 来自 plan.md 的正确功能名称
    - 阶段 1：设置任务（项目初始化）
    - 阶段 2：基础任务（所有用户故事的阻塞性前置条件）

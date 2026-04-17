@@ -19,7 +19,7 @@ $ARGUMENTS
 按照此执行流程：
 
 1. **加载或初始化**：
-   - 从 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"` 加载宪章。
+   - 从 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/memory/constitution.md'))"` 加载宪章。
    - 识别占位符如 `[项目名称]`、`[原则名称]` 等。
 
 2. **收集原则**：
@@ -33,7 +33,7 @@ $ARGUMENTS
    - 保持结构简单：标题、原则和基本的治理章节。
 
 4. **同步模板（可选但推荐）**：
-   - 简要检查更新后的原则是否影响 !`node -e "console.log(require('fs').existsSync('.specify/templates/') ? require('path').resolve('.specify/templates/') : require('path').resolve('${WAVE_SKILL_DIR}/../../templates/'))"` 的模板（规格、计划或任务）。
+   - 简要检查更新后的原则是否影响 !`node -e "console.log(require('fs').existsSync('.specify/templates/') ? require('path').resolve('.specify/templates/') : require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/'))"` 的模板（规格、计划或任务）。
    - 如果原则要求新章节（例如"安全分析"），确保 `.specify/templates/` 的项目级模板反映这一点。
 
 5. **完成**：

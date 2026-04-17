@@ -32,18 +32,18 @@ Given that feature description, do this:
      - "Create a dashboard for analytics" → "analytics-dashboard"
      - "Fix payment processing timeout bug" → "fix-payment-timeout"
 
-2. Run the script `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS"` from repo root **with the short-name argument** and parse its JSON output for BRANCH_NAME and SPEC_FILE. All file paths must be absolute.
+2. Run the script `node ${WAVE_PLUGIN_ROOT}/scripts/create-new-feature.mjs --json "$ARGUMENTS"` from repo root **with the short-name argument** and parse its JSON output for BRANCH_NAME and SPEC_FILE. All file paths must be absolute.
 
    **IMPORTANT**:
 
-   - Append the short-name argument to the `node ${WAVE_SKILL_DIR}/../../scripts/create-new-feature.mjs --json "$ARGUMENTS"` command with the 2-4 word short name you created in step 1
+   - Append the short-name argument to the `node ${WAVE_PLUGIN_ROOT}/scripts/create-new-feature.mjs --json "$ARGUMENTS"` command with the 2-4 word short name you created in step 1
    - Bash: `--short-name "your-generated-short-name"`
    - PowerShell: `-ShortName "your-generated-short-name"`
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
    - You must only ever run this script once
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
 
-3. Load !`node -e "console.log(require('fs').existsSync('.specify/templates/spec-template.md') ? require('path').resolve('.specify/templates/spec-template.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../templates/spec-template.md'))"` to understand required sections.
+3. Load !`node -e "console.log(require('fs').existsSync('.specify/templates/spec-template.md') ? require('path').resolve('.specify/templates/spec-template.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/spec-template.md'))"` to understand required sections.
 
 4. Follow this execution flow:
 

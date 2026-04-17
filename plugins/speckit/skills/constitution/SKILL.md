@@ -19,7 +19,7 @@ You are creating or updating the project constitution at `.specify/memory/consti
 Follow this execution flow:
 
 1. **Load or Initialize**:
-   - Load the constitution from !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"`.
+   - Load the constitution from !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/memory/constitution.md'))"`.
    - Identify placeholders like `[PROJECT_NAME]`, `[PRINCIPLE_NAME]`, etc.
 
 2. **Collect Principles**:
@@ -33,7 +33,7 @@ Follow this execution flow:
    - Keep the structure simple: Header, Principles, and a basic Governance section.
 
 4. **Sync Templates (Optional but Recommended)**:
-   - Briefly check if updated principles affect templates at !`node -e "console.log(require('fs').existsSync('.specify/templates/') ? require('path').resolve('.specify/templates/') : require('path').resolve('${WAVE_SKILL_DIR}/../../templates/'))"` (spec, plan, or tasks).
+   - Briefly check if updated principles affect templates at !`node -e "console.log(require('fs').existsSync('.specify/templates/') ? require('path').resolve('.specify/templates/') : require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/'))"` (spec, plan, or tasks).
    - If a principle mandates a new section (e.g., "Security Analysis"), ensure project-level templates at `.specify/templates/` reflect this.
 
 5. **Finalize**:

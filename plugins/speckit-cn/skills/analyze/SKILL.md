@@ -22,13 +22,13 @@ $ARGUMENTS
 
 **严格只读**：不要修改任何文件。输出结构化分析报告。提供可选的修复计划（用户必须在手动调用任何后续编辑命令之前明确批准）。
 
-**宪章权威**：项目宪章（!`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"`）在此分析范围内是**不可协商的**。宪章冲突自动为关键，需要调整规格、计划或任务——而不是稀释、重新解释或静默忽略原则。如果原则本身需要更改，必须在 `/analyze` 之外的单独、明确的宪章更新中进行。
+**宪章权威**：项目宪章（!`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/memory/constitution.md'))"`）在此分析范围内是**不可协商的**。宪章冲突自动为关键，需要调整规格、计划或任务——而不是稀释、重新解释或静默忽略原则。如果原则本身需要更改，必须在 `/analyze` 之外的单独、明确的宪章更新中进行。
 
 ## 执行步骤
 
 ### 1. 初始化分析上下文
 
-从仓库根目录运行 `node ${WAVE_SKILL_DIR}/../../scripts/check-prerequisites.mjs --json --require-tasks --include-tasks` 一次并解析 JSON 获取 FEATURE_DIR 和 AVAILABLE_DOCS。派生绝对路径：
+从仓库根目录运行 `node ${WAVE_PLUGIN_ROOT}/scripts/check-prerequisites.mjs --json --require-tasks --include-tasks` 一次并解析 JSON 获取 FEATURE_DIR 和 AVAILABLE_DOCS。派生绝对路径：
 
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md
@@ -66,7 +66,7 @@ $ARGUMENTS
 
 **从宪章：**
 
-- 加载 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_SKILL_DIR}/../../memory/constitution.md'))"` 用于原则验证
+- 加载 !`node -e "console.log(require('fs').existsSync('.specify/memory/constitution.md') ? require('path').resolve('.specify/memory/constitution.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/memory/constitution.md'))"` 用于原则验证
 
 ### 3. 构建语义模型
 

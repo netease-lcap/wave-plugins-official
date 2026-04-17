@@ -35,7 +35,7 @@ $ARGUMENTS
 
 ## 执行步骤
 
-1. **设置**：从仓库根目录运行 `node ${WAVE_SKILL_DIR}/../../scripts/check-prerequisites.mjs --json` 并解析 JSON 获取 FEATURE_DIR 和 AVAILABLE_DOCS 列表。
+1. **设置**：从仓库根目录运行 `node ${WAVE_PLUGIN_ROOT}/scripts/check-prerequisites.mjs --json` 并解析 JSON 获取 FEATURE_DIR 和 AVAILABLE_DOCS 列表。
    - 所有文件路径必须是绝对路径。
    - 对于参数中的单引号如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或尽可能使用双引号："I'm Groot"）。
 
@@ -205,7 +205,7 @@ $ARGUMENTS
    - ✅ "需求中是否已处理 [边界情况/场景]？"
    - ✅ "规格是否定义了 [缺失方面]？"
 
-6. **结构参考**：按照 `${WAVE_SKILL_DIR}/../../templates/checklist-template.md` 中的规范模板生成检查清单，用于标题、元信息章节、类别标题和 ID 格式。如果模板不可用，使用：H1 标题、目的/创建元信息行、包含 `- [ ] CHK### <需求项目>` 行的 `##` 类别章节，ID 从 CHK001 开始全局递增。
+6. **结构参考**：按照 `${WAVE_PLUGIN_ROOT}/templates/checklist-template.md` 中的规范模板生成检查清单，用于标题、元信息章节、类别标题和 ID 格式。如果模板不可用，使用：H1 标题、目的/创建元信息行、包含 `- [ ] CHK### <需求项目>` 行的 `##` 类别章节，ID 从 CHK001 开始全局递增。
 
 7. **报告**：输出创建的检查清单完整路径、项目计数，并提醒用户每次运行创建一个新文件。总结：
    - 选择的焦点区域

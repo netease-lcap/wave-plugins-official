@@ -22,7 +22,7 @@ $ARGUMENTS
 
 执行步骤：
 
-1. 从仓库根目录运行 `node ${WAVE_SKILL_DIR}/../../scripts/check-prerequisites.mjs --json --paths-only` **一次**（组合 `--json --paths-only` 模式 / `-Json -PathsOnly`）。解析最小 JSON 负载字段：
+1. 从仓库根目录运行 `node ${WAVE_PLUGIN_ROOT}/scripts/check-prerequisites.mjs --json --paths-only` **一次**（组合 `--json --paths-only` 模式 / `-Json -PathsOnly`）。解析最小 JSON 负载字段：
    - `FEATURE_DIR`
    - `FEATURE_SPEC`
    - （可选捕获 `IMPL_PLAN`、`TASKS` 用于未来链式流程。）
