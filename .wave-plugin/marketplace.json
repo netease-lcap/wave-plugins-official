@@ -48,6 +48,11 @@
       "name": "tavily-search",
       "description": "Tavily AI-powered search MCP server for web search capabilities",
       "source": "./plugins/tavily-search"
+    },
+    {
+      "name": "lcap-extension-component",
+      "description": "LCAP extension component skills for spec extension server template",
+      "source": "./plugins/lcap-extension-component"
     }
   ]
 }
