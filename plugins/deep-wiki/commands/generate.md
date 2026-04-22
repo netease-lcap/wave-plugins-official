@@ -1,10 +1,10 @@
 ---
-description: 为当前仓库生成完整的 Wiki (在 docs/ 目录下) — 目录 + 所有页面 + 入职指南 + 带有深色模式 Mermaid 图表的 Markdown 文件
+description: 为当前仓库生成完整的 Wiki — 目录 + 所有页面 + 入职指南 + VitePress 站点 + 带有深色模式 Mermaid 图表和 click-to-zoom 的 Markdown 文件
 ---
 
 # Deep Wiki: 全量生成
 
-你是一名技术文档架构师。为该仓库生成一个完整的、全面的 Wiki，包含深色模式 Mermaid 图表和源码引用。
+你是一名技术文档架构师。为该仓库生成一个完整的、全面的 Wiki，打包为 VitePress 站点，包含深色模式 Mermaid 图表、click-to-zoom 和源码引用。
 
 ## 流程
 
@@ -54,7 +54,7 @@ description: 为当前仓库生成完整的 Wiki (在 docs/ 目录下) — 目�
 
 ### 第 3 步：生成入职指南
 
-在 `docs/onboarding/` 文件夹中生成**四份**针对不同受众的入职指南：
+在 `wiki/onboarding/` 文件夹中生成**四份**针对不同受众的入职指南：
 
 1. **贡献者指南** (1000–2500 行) — 面向新贡献者（假设熟悉 Python/JS）。渐进式：第一部分（语言/框架基础及跨语言比较），第二部分（此代码库的架构和领域模型），第三部分（产出 — 搭建、测试、贡献）。包含术语表、关键文件参考和附录。
 
@@ -66,8 +66,9 @@ description: 为当前仓库生成完整的 Wiki (在 docs/ 目录下) — 目�
 
 ### 第 4 步：生成页面
 
-在 `docs/` 文件夹中为目录中的每个叶节点生成一个完整的文档页面：
+在 `wiki/` 文件夹中为目录中的每个叶节点生成一个完整的文档页面：
 
+- 添加 VitePress frontmatter：`title` 和 `description`
 - 开始时提供一段概览，解释“为什么”存在此组件
 - 开始时提供一个**一目了然的摘要表**（组件、职责、关键文件、源码），以便读者在 30 秒内掌握系统
 - 每页包含**至少 3–5 个 Mermaid 图表**，使用至少 2 种不同的图表类型（架构图、时序图、类图、状态图、ER 图或流程图）
@@ -83,11 +84,25 @@ description: 为当前仓库生成完整的 Wiki (在 docs/ 目录下) — 目�
 在组装之前：
 
 1. **转义泛型** — 在代码块之外，将裸露的 `Task<string>`, `List<T>` 等包裹在反引号中
-2. **修复 Mermaid `<br/>`** — 替换为 `<br>`
+2. **修复 Mermaid `<br/>`** — 替换为 `<br>`（Vue 编译器不支持自闭合标签）
 3. **修复 Mermaid 行内样式** — 将浅色模式颜色替换为深色等效颜色
 4. **验证** — 验证文件路径是否存在，类/方法名是否准确，Mermaid 语法是否正确
 
-### 第 6 步：生成根目录 AGENTS.md 文件（仅在缺失时）
+### 第 6 步：打包为 VitePress 站点
+
+在 `wiki/` 目录中搭建完整的 VitePress 项目：
+
+- **目录结构**：`wiki/package.json`、`wiki/.gitignore`、`wiki/.vitepress/config.mts`、`wiki/.vitepress/theme/index.ts`、`wiki/.vitepress/theme/custom.css`、`wiki/.vitepress/public/logo.svg`
+- **深色主题**：Daytona 风格（Inter + JetBrains Mono 字体），`appearance: 'dark'`
+- **Mermaid 图表**：使用 `vitepress-plugin-mermaid`，配置深色模式主题变量
+- **Click-to-zoom**：图片使用 `medium-zoom`，Mermaid 图表使用自定义全屏 overlay（支持缩放/拖拽/键盘快捷键）
+- **Focus mode**：F 键切换，隐藏侧边栏和导航栏
+- **动态侧边栏**：从目录结构中生成，onboarding 部分置于最前（展开状态）
+- **`wiki/index.md` 首页**：开发者导向，**不要**使用 `hero:` frontmatter。包含：Quick Start 可运行命令、架构概览图表、文档映射表、关键文件表（带源码引用）、技术栈摘要表
+
+完整规范见 `/deep-wiki:build`。
+
+### 第 7 步：生成根目录 AGENTS.md 文件（仅在缺失时）
 
 为根目录生成 `AGENTS.md` 文件。该文件为编码 Agent 提供项目特定的上下文 — 构建命令、测试指令、代码约定和边界。
 
@@ -96,6 +111,17 @@ description: 为当前仓库生成完整的 Wiki (在 docs/ 目录下) — 目�
 1. **分析仓库** — 分析项目的语言、框架、构建命令、测试命令、约定和 CI 配置。
 2. **生成定制的 AGENTS.md**，涵盖六个核心领域：构建和运行命令（首先！）、测试、项目结构、代码风格、Git 工作流和边界（✅ 始终 / ⚠️ 先询问 / 🚫 绝不）。
 3. **输出摘要**，报告是否创建了文件或已存在。
+
+### 第 8 步：生成 llms.txt 文件
+
+生成遵循 [llms.txt 规范](https://llmstxt.org/) 的 LLM 友好型项目摘要：
+
+1. **`./llms.txt`**（仓库根目录）— 标准发现位置。包含 H1 项目名、blockquote 摘要，以及 H2 分节链接到 `wiki/` 目录。
+2. **`wiki/llms.txt`** — 结构相同但使用 wiki 相对路径（用于 VitePress 部署）。
+3. **`wiki/llms-full.txt`** — 完整页面内容内联在 `<doc title="..." path="...">` 块中。去除 YAML frontmatter，保留 Mermaid 图表和引用。
+4. **分节顺序**：Onboarding → Architecture → Getting Started → Deep Dive → Optional
+
+完整规范见 `/deep-wiki:llms`。
 
 ## Mermaid 图表规则（所有图表）
 
