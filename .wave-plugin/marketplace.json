@@ -53,16 +53,6 @@
       "name": "lcap-extension-component",
       "description": "LCAP 扩展组件技能",
       "source": "./plugins/lcap-extension-component"
-    },
-    {
-      "name": "superpowers",
-      "description": "Superpowers teaches Claude brainstorming, subagent driven development with built in code review, systematic debugging, and red/green TDD. Additionally, it teaches Claude how to author and test new skills.",
-      "category": "development",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/obra/superpowers.git"
-      },
-      "homepage": "https://github.com/obra/superpowers.git"
     }
   ]
 }
