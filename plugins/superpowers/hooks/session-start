@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# SessionStart hook for superpowers plugin
+# Supports Wave, Claude Code, Cursor, and Copilot CLI
+
+set -euo pipefail
+
+# Determine plugin root directory
+# Wave injects WAVE_PLUGIN_ROOT as env var; fall back to script-relative path
+if [ -n "${WAVE_PLUGIN_ROOT:-}" ]; then
+  PLUGIN_ROOT="${WAVE_PLUGIN_ROOT}"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+fi
+
+# Check if legacy skills directory exists and build warning
+warning_message=""
+legacy_skills_dir="${HOME}/.config/superpowers/skills"
+if [ -d "$legacy_skills_dir" ]; then
+    warning_message="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:⚠️ **WARNING:** Superpowers now uses the skills system. Custom skills in ~/.config/superpowers/skills will not be read. Move custom skills to the appropriate skills directory instead. To make this message go away, remove ~/.config/superpowers/skills</important-reminder>"
+fi
+
+# Read using-superpowers content
+using_superpowers_content=$(cat "${PLUGIN_ROOT}/skills/using-superpowers/SKILL.md" 2>&1 || echo "Error reading using-superpowers skill")
+
+# Escape string for JSON embedding using bash parameter substitution.
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+using_superpowers_escaped=$(escape_for_json "$using_superpowers_content")
+warning_escaped=$(escape_for_json "$warning_message")
+session_context="You have superpowers. See the superpowers skills for TDD, debugging, planning, code review, and more."
+
+# Output context injection as JSON.
+# Wave expects additionalContext or initialUserMessage keys.
+# Cursor hooks expect additional_context (snake_case).
+# Claude Code hooks expect hookSpecificOutput.additionalContext (nested).
+# Copilot CLI (v1.0.11+) and others expect additionalContext (top-level, SDK standard).
+#
+# Uses printf instead of heredoc to work around bash 5.3+ heredoc hang.
+if [ -n "${WAVE_PLUGIN_ROOT:-}" ]; then
+  # Wave
+  printf '{\n  "additionalContext": "%s"\n}\n' "$session_context"
+elif [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  # Cursor sets CURSOR_PLUGIN_ROOT (may also set CLAUDE_PLUGIN_ROOT)
+  printf '{\n  "additional_context": "%s"\n}\n' "$session_context"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  # Claude Code sets CLAUDE_PLUGIN_ROOT without COPILOT_CLI
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$session_context"
+else
+  # Copilot CLI (sets COPILOT_CLI=1) or unknown platform — SDK standard format
+  printf '{\n  "additionalContext": "%s"\n}\n' "$session_context"
+fi
+
+exit 0

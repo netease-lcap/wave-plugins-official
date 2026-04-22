@@ -53,6 +53,11 @@
       "name": "lcap-extension-component",
       "description": "LCAP 扩展组件技能",
       "source": "./plugins/lcap-extension-component"
+    },
+    {
+      "name": "superpowers",
+      "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
+      "source": "./plugins/superpowers"
     }
   ]
 }

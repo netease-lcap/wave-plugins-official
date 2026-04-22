@@ -1,0 +1,13 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "${WAVE_PLUGIN_ROOT}/hooks/session-start",
+          "description": "Inject superpowers skills context at session start"
+        }
+      ]
+    }
+  ]
+}
