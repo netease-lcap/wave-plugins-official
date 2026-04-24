@@ -26,13 +26,13 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 1. **解析源码仓库上下文**
 2. 读取 `cwspec/research-report.md` 研究报告
-3. 参考 `knowledge/precheck-manual.md` 中的需求分析方法论
-4. 参考 `warehouse/` 中的案例结构范式
+3. 参考 `${WAVE_PLUGIN_ROOT}/knowledge/precheck-manual.md` 中的需求分析方法论
+4. 参考 `${WAVE_PLUGIN_ROOT}/warehouse/` 中的案例结构范式
 5. 参考以下 NASL 声明规范知识，了解文档结构要求：
-   - `knowledge/entity-declaration.md` — 实体必须包含的字段、FK 约束、表格格式
-   - `knowledge/enum-declaration.md` — 枚举统一管理规范
-   - `knowledge/logic-declaration.md` — 逻辑签名格式、分页查询规范
-   - `knowledge/view-declaration.md` — 页面声明格式、逻辑依赖关系
+   - `${WAVE_PLUGIN_ROOT}/knowledge/entity-declaration.md` — 实体必须包含的字段、FK 约束、表格格式
+   - `${WAVE_PLUGIN_ROOT}/knowledge/enum-declaration.md` — 枚举统一管理规范
+   - `${WAVE_PLUGIN_ROOT}/knowledge/logic-declaration.md` — 逻辑签名格式、分页查询规范
+   - `${WAVE_PLUGIN_ROOT}/knowledge/view-declaration.md` — 页面声明格式、逻辑依赖关系
 6. 根据研究报告中的发现，规划以下文档结构：
 
 ### 规划 requirements/ 需求规范

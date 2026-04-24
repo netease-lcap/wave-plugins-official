@@ -35,7 +35,7 @@ $ARGUMENTS
 
 ### 第 1 步：创建输出目录
 
-从仓库根目录运行 `node ${WAVE_SKILL_DIR}/scripts/init-cwspec.mjs --json` 初始化 `cwspec/` 目录。输出目录固定为 `cwspec/`，包含：
+从仓库根目录运行 `node ${WAVE_PLUGIN_ROOT}/scripts/init-cwspec.mjs --json` 初始化 `cwspec/` 目录。输出目录固定为 `cwspec/`，包含：
 - `cwspec/research-report.md` — 代码研究报告
 - `cwspec/architecture-plan.md` — 架构规划
 - `cwspec/generation-manifest.json` — 生成清单
@@ -48,7 +48,7 @@ $ARGUMENTS
 
 加载以下知识源，为文档生成提供规则和范式：
 
-1. **知识库** `${WAVE_SKILL_DIR}/knowledge/`：
+1. **知识库** `${WAVE_PLUGIN_ROOT}/knowledge/`：
    - `precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
    - `entity-declaration.md` — 实体类型定义生成规则（NASL 格式、表格规范、必填字段、FK 约束）
    - `enum-declaration.md` — 枚举类型定义生成规则（NASL 格式、枚举值管理）
@@ -56,10 +56,10 @@ $ARGUMENTS
    - `logic-declaration.md` — 逻辑类型定义生成规则（$Logic 装饰器、参数签名、分页查询格式）
    - `view-declaration.md` — 页面类型定义生成规则（$View 装饰器、页面函数签名、逻辑依赖引用）
 
-2. **模板** `${WAVE_SKILL_DIR}/templates/`：
+2. **模板** `${WAVE_PLUGIN_ROOT}/templates/`：
    - 加载全部 `-template.md` 文件，理解每个模板的结构、占位符格式和生成要求
 
-3. **案例库** `${WAVE_SKILL_DIR}/warehouse/`：
+3. **案例库** `${WAVE_PLUGIN_ROOT}/warehouse/`：
    - `warehouse/plan/data-model/entity-*.md` — 实体案例（9 个）
    - `warehouse/plan/frontend/view-*.md` — 页面案例（8 个）
    - `warehouse/plan/backend/logic-*.md` — 逻辑案例（44 个）
@@ -141,10 +141,10 @@ $ARGUMENTS
 
 ### 第 7 步：质量验证
 
-1. **命名冲突检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与 NASL 保留字冲突
-2. **菜单结构检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确
-3. **格式检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-placeholders.mjs cwspec/` 验证无占位符残留、路径完整、行号格式正确
-4. **交叉引用检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效；plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；tasks 与 plan 条目对应
+1. **命名冲突检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与 NASL 保留字冲突
+2. **菜单结构检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确
+3. **格式检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-placeholders.mjs cwspec/` 验证无占位符残留、路径完整、行号格式正确
+4. **交叉引用检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效；plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；tasks 与 plan 条目对应
 5. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
 6. 最多 3 次迭代修正
 7. 质量报告写入 `cwspec/quality-report.md`
