@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * code2cwspec initialization script
- * Creates the cwspec/ directory structure and loads spec-server templates into .specify/templates/.
+ * Creates the cwspec/ directory structure and loads CodeWave templates into .specify/templates/.
  *
  * Usage: node init-cwspec.mjs [--json]
  */
