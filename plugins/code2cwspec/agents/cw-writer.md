@@ -30,18 +30,19 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 3. 读取 `cwspec/research-report.md`
 4. 按 generation-manifest.json 中的顺序逐个生成文档
 
-## 上下文知识加载
+## 按需加载知识
 
-在生成文档前，加载以下知识源：
+**写到哪里加载哪里**，禁止一次性加载全部知识：
 
-1. **知识库**：`${WAVE_PLUGIN_ROOT}/knowledge/precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
-2. **案例库**：`${WAVE_PLUGIN_ROOT}/warehouse/` — 实体/页面/逻辑案例（61 个），作为写作范式参考
-3. **NASL 声明规范**（生成时必须严格遵循）：
-   - `${WAVE_PLUGIN_ROOT}/knowledge/entity-declaration.md` — 实体类型定义规则（NASL 格式、表格规范、必填字段、FK 约束）
-   - `${WAVE_PLUGIN_ROOT}/knowledge/enum-declaration.md` — 枚举类型定义规则（NASL 格式、枚举值管理）
-   - `${WAVE_PLUGIN_ROOT}/knowledge/structure-declaration.md` — 数据结构类型定义规则（NASL 格式、入参/返回结构）
-   - `${WAVE_PLUGIN_ROOT}/knowledge/logic-declaration.md` — 逻辑类型定义规则（$Logic 装饰器、参数签名、分页查询格式）
-   - `${WAVE_PLUGIN_ROOT}/knowledge/view-declaration.md` — 页面类型定义规则（$View 装饰器、页面函数签名、逻辑依赖引用）
+| 当前写的文档类型 | 加载对应知识库 |
+|---|---|
+| 实体（entity-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/entity-declaration.md` |
+| 枚举（enums.md） | `${WAVE_PLUGIN_ROOT}/knowledge/enum-declaration.md` |
+| 数据结构（structures.md） | `${WAVE_PLUGIN_ROOT}/knowledge/structure-declaration.md` |
+| 逻辑（logic-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/logic-declaration.md` |
+| 页面（view-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/view-declaration.md` |
+
+案例参考：只读 1-2 个同类案例，不要全部加载。如写 `entity-Customer.md` 时只读 `warehouse/plan/data-model/entity-*.md` 中的一个。
 
 ## 文档生成规则
 

@@ -44,26 +44,9 @@ $ARGUMENTS
 - `cwspec/tasks/` — 开发任务
 - `cwspec/quality-report.md` — 质量报告
 
-### 第 2 步：加载上下文知识
+### 第 2 步：委托子 Agent
 
-加载以下知识源，为文档生成提供规则和范式：
-
-1. **知识库** `${WAVE_PLUGIN_ROOT}/knowledge/`：
-   - `precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
-   - `entity-declaration.md` — 实体类型定义生成规则（NASL 格式、表格规范、必填字段、FK 约束）
-   - `enum-declaration.md` — 枚举类型定义生成规则（NASL 格式、枚举值管理）
-   - `structure-declaration.md` — 数据结构类型定义生成规则（NASL 格式、入参/返回结构）
-   - `logic-declaration.md` — 逻辑类型定义生成规则（$Logic 装饰器、参数签名、分页查询格式）
-   - `view-declaration.md` — 页面类型定义生成规则（$View 装饰器、页面函数签名、逻辑依赖引用）
-
-2. **模板** `${WAVE_PLUGIN_ROOT}/templates/`：
-   - 加载全部 `-template.md` 文件，理解每个模板的结构、占位符格式和生成要求
-
-3. **案例库** `${WAVE_PLUGIN_ROOT}/warehouse/`：
-   - `warehouse/plan/data-model/entity-*.md` — 实体案例（9 个）
-   - `warehouse/plan/frontend/view-*.md` — 页面案例（8 个）
-   - `warehouse/plan/backend/logic-*.md` — 逻辑案例（44 个）
-   - 作为写作范式参考，确保文档格式与 CodeWave 标准一致
+后续步骤将通过子 agent 完成实际工作。各 agent 会自行加载所需的知识库、模板和案例，无需在此预加载。
 
 ### 第 3 步：全量代码研究
 
