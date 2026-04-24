@@ -26,8 +26,8 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 激活后，你：
 
 1. **解析源码仓库上下文**
-2. 读取 `ARTIFACTS_DIR/architecture-plan.md` 和 `ARTIFACTS_DIR/generation-manifest.json`
-3. 读取 `ARTIFACTS_DIR/research-report.md`
+2. 读取 `cwspec/architecture-plan.md` 和 `cwspec/generation-manifest.json`
+3. 读取 `cwspec/research-report.md`
 4. 按 generation-manifest.json 中的顺序逐个生成文档
 
 ## 文档生成规则

@@ -25,7 +25,7 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 激活后，你：
 
 1. **解析源码仓库上下文**
-2. 读取 `ARTIFACTS_DIR/research-report.md` 研究报告
+2. 读取 `cwspec/research-report.md` 研究报告
 3. 根据研究报告中的发现，规划以下文档结构：
 
 ### 规划 requirements/ 需求规范
@@ -80,13 +80,13 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 ## 输出
 
-1. **`ARTIFACTS_DIR/architecture-plan.md`** — 详细的文档结构规划，包含：
+1. **`cwspec/architecture-plan.md`** — 详细的文档结构规划，包含：
    - 每个要生成的文档的路径
    - 使用的模板文件路径
    - 需要从研究报告中提取的输入数据
    - 文档间的依赖关系
 
-2. **`ARTIFACTS_DIR/generation-manifest.json`** — JSON 格式的生成清单：
+2. **`cwspec/generation-manifest.json`** — JSON 格式的生成清单：
 
 ```json
 {

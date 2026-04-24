@@ -2,7 +2,7 @@
 name: code2cwspec
 description: 全量分析现有代码仓库，逆向生成为 Codewave (LCAP) 规范模板，一次性输出 requirements/plan/tasks 全部文档。
 allowed-tools:
-  - Bash(node */create-cw-feature.mjs*)
+  - Bash(node */init-cwspec.mjs*)
   - Bash(git*)
 ---
 
@@ -29,12 +29,16 @@ $ARGUMENTS
 3. **确定当前分支**：运行 `git rev-parse --abbrev-ref HEAD`
 4. **在解析之前，不要继续**
 
-### 第 1 步：确定目标目录
+### 第 1 步：创建输出目录
 
-运行 `node ${WAVE_SKILL_DIR}/scripts/create-cw-feature.mjs --json "$ARGUMENTS" --short-name "short-name"` 获取 FEATURE_DIR 和 ARTIFACTS_DIR。
-
-- 如果用户未提供具体描述，使用 AskUserQuestion 询问："你要转换哪个系统/模块？"
-- short-name 从用户描述中提取 2-4 个关键词，保留技术术语
+从仓库根目录运行 `node ${WAVE_SKILL_DIR}/scripts/init-cwspec.mjs --json` 初始化 `cwspec/` 目录。输出目录固定为 `cwspec/`，包含：
+- `cwspec/research-report.md` — 代码研究报告
+- `cwspec/architecture-plan.md` — 架构规划
+- `cwspec/generation-manifest.json` — 生成清单
+- `cwspec/requirements/` — 需求规范
+- `cwspec/plan/` — 项目设计
+- `cwspec/tasks/` — 开发任务
+- `cwspec/quality-report.md` — 质量报告
 
 ### 第 2 步：加载模板
 
@@ -52,7 +56,7 @@ $ARGUMENTS
 6. **集成映射**：外部 API、第三方服务、消息队列、缓存
 7. **术语提取**：从类名、属性名、注释中提取业务术语和角色术语
 
-研究产出写入 `ARTIFACTS_DIR/research-report.md`。
+研究产出写入 `cwspec/research-report.md`。
 
 ### 第 4 步：架构规划
 
@@ -65,7 +69,7 @@ $ARGUMENTS
 5. 识别特殊组件和外部集成
 6. 生成文档生成清单（JSON 格式，列出每个要生成的文件及其模板路径和输入数据）
 
-架构规划写入 `ARTIFACTS_DIR/architecture-plan.md` 和 `ARTIFACTS_DIR/generation-manifest.json`。
+架构规划写入 `cwspec/architecture-plan.md` 和 `cwspec/generation-manifest.json`。
 
 ### 第 5 步：批量生成文档
 
@@ -120,7 +124,7 @@ $ARGUMENTS
 2. **格式检查**：naturalts 代码块格式正确；实体 PascalCase、属性 camelCase、逻辑 camelCase
 3. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
 4. 最多 3 次迭代修正
-5. 质量报告写入 `ARTIFACTS_DIR/quality-report.md`
+5. 质量报告写入 `cwspec/quality-report.md`
 
 ### 第 8 步：报告完成情况
 

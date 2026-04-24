@@ -126,7 +126,7 @@ description: 专家级代码分析师，全量扫描代码库，提取数据模�
 
 ## 输出格式
 
-将研究结果写入 `ARTIFACTS_DIR/research-report.md`，包含以下章节：
+将研究结果写入 `cwspec/research-report.md`，包含以下章节：
 
 ```markdown
 # 代码库研究报告
