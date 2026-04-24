@@ -36,7 +36,6 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 
 1. **知识库**：`${WAVE_SKILL_DIR}/knowledge/precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
 2. **案例库**：`${WAVE_SKILL_DIR}/warehouse/` — 实体/页面/逻辑案例（61 个），作为写作范式参考
-3. **共享工具**：`${WAVE_SKILL_DIR}/scripts/javascript/shared/` — parse/check/write 等核心工具库（生成后可用于验证）
 
 ## 文档生成规则
 
