@@ -63,7 +63,7 @@ $ARGUMENTS
    - `warehouse/plan/data-model/entity-*.md` — 实体案例（9 个）
    - `warehouse/plan/frontend/view-*.md` — 页面案例（8 个）
    - `warehouse/plan/backend/logic-*.md` — 逻辑案例（44 个）
-   - 作为写作范式参考，确保文档格式与 spec-server 标准一致
+   - 作为写作范式参考，确保文档格式与 CodeWave 标准一致
 
 ### 第 3 步：全量代码研究
 
