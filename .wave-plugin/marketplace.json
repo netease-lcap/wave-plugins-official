@@ -25,6 +25,11 @@
       "source": "./plugins/code2spec"
     },
     {
+      "name": "code2cwspec",
+      "description": "从现有代码转换为 Codewave 规范模板：将 .NET、Java 等老系统代码逆向生成为 spec-server 格式的 requirements/plan/tasks 模板",
+      "source": "./plugins/code2cwspec"
+    },
+    {
       "name": "commit-skills",
       "description": "Streamlined git workflow skills for committing, pushing, and creating pull requests",
       "source": "./plugins/commit-skills"
