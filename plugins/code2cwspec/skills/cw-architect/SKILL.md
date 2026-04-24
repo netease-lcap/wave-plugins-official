@@ -26,7 +26,9 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 1. **解析源码仓库上下文**
 2. 读取 `cwspec/research-report.md` 研究报告
-3. 根据研究报告中的发现，规划以下文档结构：
+3. 参考 `${WAVE_SKILL_DIR}/knowledge/precheck-manual.md` 中的需求分析方法论
+4. 参考 `${WAVE_SKILL_DIR}/warehouse/` 中的案例结构范式
+5. 根据研究报告中的发现，规划以下文档结构：
 
 ### 规划 requirements/ 需求规范
 

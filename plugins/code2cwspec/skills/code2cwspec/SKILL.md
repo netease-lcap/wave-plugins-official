@@ -40,9 +40,21 @@ $ARGUMENTS
 - `cwspec/tasks/` — 开发任务
 - `cwspec/quality-report.md` — 质量报告
 
-### 第 2 步：加载模板
+### 第 2 步：加载上下文知识
 
-加载 `${WAVE_SKILL_DIR}/templates/` 下的全部 `-template.md` 文件。理解每个模板的结构、占位符格式和生成要求。
+加载以下知识源，为文档生成提供规则和范式：
+
+1. **知识库** `${WAVE_SKILL_DIR}/knowledge/`：
+   - `precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
+
+2. **模板** `${WAVE_SKILL_DIR}/templates/`：
+   - 加载全部 `-template.md` 文件，理解每个模板的结构、占位符格式和生成要求
+
+3. **案例库** `${WAVE_SKILL_DIR}/warehouse/`：
+   - `warehouse/plan/data-model/entity-*.md` — 实体案例（9 个）
+   - `warehouse/plan/frontend/view-*.md` — 页面案例（8 个）
+   - `warehouse/plan/backend/logic-*.md` — 逻辑案例（44 个）
+   - 作为写作范式参考，确保文档格式与 spec-server 标准一致
 
 ### 第 3 步：全量代码研究
 
