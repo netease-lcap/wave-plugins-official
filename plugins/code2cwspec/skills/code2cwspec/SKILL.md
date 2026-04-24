@@ -3,6 +3,9 @@ name: code2cwspec
 description: 全量分析现有代码仓库，逆向生成为 Codewave (LCAP) 规范模板，一次性输出 requirements/plan/tasks 全部文档。
 allowed-tools:
   - Bash(node */init-cwspec.mjs*)
+  - Bash(node */check-naslnames.mjs*)
+  - Bash(node */check-menus.mjs*)
+  - Bash(node */check-crossrefs.mjs*)
   - Bash(git*)
 ---
 
@@ -132,11 +135,13 @@ $ARGUMENTS
 
 ### 第 7 步：质量验证
 
-1. **交叉引用检查**：plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；entity 引用的枚举和依赖实体存在；tasks 与 plan 条目对应
-2. **格式检查**：naturalts 代码块格式正确；实体 PascalCase、属性 camelCase、逻辑 camelCase
-3. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
-4. 最多 3 次迭代修正
-5. 质量报告写入 `cwspec/quality-report.md`
+1. **命名冲突检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与 NASL 保留字冲突
+2. **菜单结构检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确
+3. **交叉引用检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效；plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；tasks 与 plan 条目对应
+4. **格式检查**：naturalts 代码块格式正确；实体 PascalCase、属性 camelCase、逻辑 camelCase
+5. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
+6. 最多 3 次迭代修正
+7. 质量报告写入 `cwspec/quality-report.md`
 
 ### 第 8 步：报告完成情况
 
