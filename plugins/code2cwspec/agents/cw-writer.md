@@ -34,14 +34,20 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 
 在生成文档前，加载以下知识源：
 
-1. **知识库**：`${WAVE_SKILL_DIR}/knowledge/precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
-2. **案例库**：`${WAVE_SKILL_DIR}/warehouse/` — 实体/页面/逻辑案例（61 个），作为写作范式参考
+1. **知识库**：`knowledge/precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
+2. **案例库**：`warehouse/` — 实体/页面/逻辑案例（61 个），作为写作范式参考
+3. **NASL 声明规范**（生成时必须严格遵循）：
+   - `knowledge/entity-declaration.md` — 实体类型定义规则（NASL 格式、表格规范、必填字段、FK 约束）
+   - `knowledge/enum-declaration.md` — 枚举类型定义规则（NASL 格式、枚举值管理）
+   - `knowledge/structure-declaration.md` — 数据结构类型定义规则（NASL 格式、入参/返回结构）
+   - `knowledge/logic-declaration.md` — 逻辑类型定义规则（$Logic 装饰器、参数签名、分页查询格式）
+   - `knowledge/view-declaration.md` — 页面类型定义规则（$View 装饰器、页面函数签名、逻辑依赖引用）
 
 ## 文档生成规则
 
 ### 每个文档生成时：
 
-1. **加载对应模板**：从 `${WAVE_SKILL_DIR}/templates/` 加载匹配的 `-template.md` 文件
+1. **加载对应模板**：从模板目录加载匹配的 `-template.md` 文件
 2. **参考案例**：从 `warehouse/` 中找到对应类型的案例（如写 entity-*.md 参考 `warehouse/plan/data-model/entity-*.md`）
 3. **填充占位符**：用研究报告中的实际数据和架构规划中的设计填充所有占位符
 4. **遵守模板规则**：每个模板内部的注释都是硬性规则，必须遵守

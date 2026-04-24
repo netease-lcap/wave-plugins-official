@@ -50,6 +50,11 @@ $ARGUMENTS
 
 1. **知识库** `${WAVE_SKILL_DIR}/knowledge/`：
    - `precheck-manual.md` — 需求分析方法论（歧义澄清、冲突识别、功能闭合检查）
+   - `entity-declaration.md` — 实体类型定义生成规则（NASL 格式、表格规范、必填字段、FK 约束）
+   - `enum-declaration.md` — 枚举类型定义生成规则（NASL 格式、枚举值管理）
+   - `structure-declaration.md` — 数据结构类型定义生成规则（NASL 格式、入参/返回结构）
+   - `logic-declaration.md` — 逻辑类型定义生成规则（$Logic 装饰器、参数签名、分页查询格式）
+   - `view-declaration.md` — 页面类型定义生成规则（$View 装饰器、页面函数签名、逻辑依赖引用）
 
 2. **模板** `${WAVE_SKILL_DIR}/templates/`：
    - 加载全部 `-template.md` 文件，理解每个模板的结构、占位符格式和生成要求
@@ -62,7 +67,7 @@ $ARGUMENTS
 
 ### 第 3 步：全量代码研究
 
-使用 `/code2cwspec:cw-researcher` skill 对仓库进行系统性深度研究。研究员将：
+委托 `cw-researcher` agent 对仓库进行系统性深度研究。研究员将：
 
 1. **扫描仓库全貌**：入口点、配置文件、项目结构、技术栈、语言组成
 2. **结构调查**：组件、边界、模块划分、层级分离
@@ -76,7 +81,7 @@ $ARGUMENTS
 
 ### 第 4 步：架构规划
 
-使用 `/code2cwspec:cw-architect` skill，基于研究报告规划文档结构。架构师将：
+委托 `cw-architect` agent，基于研究报告规划文档结构。架构师将：
 
 1. 划分核心领域/业务模块
 2. 设计数据模型（枚举、实体、ER 关系）
@@ -89,7 +94,7 @@ $ARGUMENTS
 
 ### 第 5 步：批量生成文档
 
-使用 `/code2cwspec:cw-writer` skill，根据架构规划批量生成所有文档。按以下顺序：
+委托 `cw-writer` agent，根据架构规划批量生成所有文档。按以下顺序：
 
 **Phase A — requirements/**（需求规范）
 - `standard/terms.md` — 术语表（权限角色 + 业务术语）
@@ -140,7 +145,6 @@ $ARGUMENTS
 2. **菜单结构检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确
 3. **格式检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-placeholders.mjs cwspec/` 验证无占位符残留、路径完整、行号格式正确
 4. **交叉引用检查**：使用 `node ${WAVE_SKILL_DIR}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效；plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；tasks 与 plan 条目对应
-5. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
 5. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
 6. 最多 3 次迭代修正
 7. 质量报告写入 `cwspec/quality-report.md`
