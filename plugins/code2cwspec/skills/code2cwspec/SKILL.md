@@ -8,7 +8,7 @@ allowed-tools:
   - Bash(node */check-menus.mjs*)
   - Bash(node */check-crossrefs.mjs*)
   - Bash(node */check-placeholders.mjs*)
-  - Bash(git*)
+
 ---
 
 # Code2CwSpec: 全量代码转 Codewave 规范
@@ -25,14 +25,9 @@ $ARGUMENTS
 
 按顺序执行以下步骤：
 
-### 第 0 步：源码仓库解析（必须首先执行）
+### 第 0 步：确定当前目录
 
-1. **检查 git remote**：运行 `git remote get-url origin`
-2. **询问用户**：_"这是一个仅限本地的仓库，还是你有源码仓库 URL？"_
-   - 远程 URL → 存储为 `REPO_URL`，使用链接引用
-   - 本地 → 使用本地引用 `(文件路径:行号)`
-3. **确定当前分支**：运行 `git rev-parse --abbrev-ref HEAD`
-4. **在解析之前，不要继续**
+确认当前工作目录即为目标代码仓库根目录，后续所有路径引用均基于此目录使用本地路径格式 `(文件路径:行号)`。
 
 ### 第 1 步：创建输出目录
 
