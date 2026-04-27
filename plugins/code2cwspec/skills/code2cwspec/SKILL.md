@@ -118,6 +118,9 @@ $ARGUMENTS
 - 所有枚举统一维护在 `plan/data-model/enums.md` 中
 - 禁止生成独立的 enum-*.md 文件
 
+**占位符清理**：
+- 模板中的 `<!-- PENDING -->` 标记必须在输出文档中删除，禁止残留
+
 ### 第 7 步：质量验证
 
 1. **命名冲突检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与 NASL 保留字冲突

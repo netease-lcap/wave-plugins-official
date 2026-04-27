@@ -12,7 +12,7 @@ import path from 'path';
 // 占位符模式
 const PLACEHOLDER_PATTERNS = [
   /\[([A-Z_]{2,})\]/g,           // [FEATURE], [PLACEHOLDER], [TODO]
-  /\[([\u4e00-\u9fa5]+)\]/g,     // [占位符], [待补充], [需确认]
+  /\[([\u4e00-\u9fa5]+)\](?!\()/g,  // [占位符] 后面不跟 (url) 的才是真占位符
   /PENDING/g,
   /TBD/gi,
   /FIXME/gi,
@@ -112,14 +112,28 @@ function checkPaths(filePath, content) {
     }
     
     // 检查不完整路径
-    const incompleteMatch = line.match(/(?<!plan\/|inputs\/)([a-zA-Z][a-zA-Z0-9_-]*\.md)(?!\))/);
-    if (incompleteMatch && !line.includes('http')) {
-      issues.push({
-        file: filePath,
-        line: idx + 1,
-        type: 'incomplete-path',
-        message: `路径不完整: "${incompleteMatch[1]}" 缺少 plan/ 或 inputs/ 前缀`,
-      });
+    if (!line.includes('http')) {
+      // 1. 提取 Markdown 链接 URL 部分 (xxx.md) → 这些是有效链接，跳过
+      const linkUrls = new Set();
+      for (const m of line.matchAll(/\(([a-zA-Z0-9_./-]+\.md(?:#[a-zA-Z0-9_-]+)?)\)/g)) {
+        linkUrls.add(m[1]);
+      }
+
+      // 2. 提取行内所有 .md 路径引用（包括链接文本中的和纯文本中的）
+      for (const m of line.matchAll(/([a-zA-Z][a-zA-Z0-9_./-]*\.md)/g)) {
+        const ref = m[1];
+        // 已在链接 URL 中的跳过
+        if (linkUrls.has(ref)) continue;
+        // 以 plan/ 或 inputs/ 开头的有效路径跳过
+        if (ref.startsWith('plan/') || ref.startsWith('inputs/')) continue;
+        // 其余孤立 .md 引用报不完整
+        issues.push({
+          file: filePath,
+          line: idx + 1,
+          type: 'incomplete-path',
+          message: `路径不完整: "${ref}" 缺少 plan/ 或 inputs/ 前缀`,
+        });
+      }
     }
   });
   
