@@ -48,7 +48,7 @@ export declare function productDetail(productId?: Integer);
 
 ### 依赖的服务端逻辑
 
-<!-- 权限中心内置页面（login、noAuth、permissionCenter、roleManagement、userManagement、departmentManagement、permissionManagement）：本小节必须与官方示例完全一致，禁止自行编造或改写逻辑名称与路径。官方示例路径：warehouse/plan/frontend/view-[功能页面英文名称].md，请直接复制该文件中的「依赖的服务端逻辑」整节内容（含标题与所有条目）。 -->
+<!-- 权限中心内置页面（login、noAuth、permissionCenter、roleManagement、userManagement、departmentManagement、permissionManagement）：本小节必须与官方示例完全一致，禁止自行编造或改写逻辑名称与路径。官方示例路径：插件根目录 warehouse/plan/frontend/view-[功能页面英文名称].md，请直接复制该文件中的「依赖的服务端逻辑」整节内容（含标题与所有条目）。 -->
 <!-- 功能页面可能依赖服务端逻辑，根据以下格式列出全部可能依赖的服务端逻辑。 -->
 <!-- 特别注意：系统内置逻辑隐藏规则 -->
 <!-- - 枚举相关的所有操作（查询、加载、列表等）：系统内置逻辑，无需列出 -->

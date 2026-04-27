@@ -79,8 +79,8 @@ function extractFKReferences(dir) {
         const cols = trimmed.split('|').map(s => s.trim()).filter(Boolean);
         if (cols.length >= 4) {
           const characteristics = cols[3] || '';
-          // Extract foreign entity name: "外键关联实体XXX" or "外键(XXX)"
-          const fkMatch = characteristics.match(/外键(?:关联实体)?\s*([A-Z][A-Za-z0-9]*)/);
+          // Extract foreign entity name: "外键关联实体XXX", "外键(XXX)", "外键：XXX", "外键-XXX"
+          const fkMatch = characteristics.match(/外键(?:关联实体)?[\s:：\-（(]*([A-Z][A-Za-z0-9]*)/);
           if (fkMatch) {
             refs.push({
               file: path.relative(process.cwd(), file),
@@ -177,8 +177,11 @@ if (strict) {
     const sourceFileDir = path.dirname(path.join(baseDir, link.file));
     const resolvedPath = path.resolve(sourceFileDir, link.target);
 
-    // Verify the target exists under baseDir
-    if (!fs.existsSync(resolvedPath) && !resolvedPath.startsWith(baseDir)) {
+    // Skip links that point outside baseDir (external references)
+    if (!resolvedPath.startsWith(baseDir)) continue;
+
+    // Verify the target exists
+    if (!fs.existsSync(resolvedPath)) {
       issues.push({
         rule: 'broken-link',
         file: link.file,
