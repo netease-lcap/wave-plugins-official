@@ -170,17 +170,21 @@ for (const ref of fkRefs) {
 if (strict) {
   const links = extractMarkdownLinks(baseDir);
   for (const link of links) {
-    // Only check links that start with specs/ or inputs/
-    if (link.target.startsWith('specs/') || link.target.startsWith('inputs/')) {
-      const fullPath = path.join(baseDir, link.target);
-      if (!fs.existsSync(fullPath)) {
-        issues.push({
-          rule: 'broken-link',
-          file: link.file,
-          line: link.line,
-          message: `Markdown link to "${link.target}" does not exist (line ${link.line})`,
-        });
-      }
+    // Skip external URLs and anchor-only links
+    if (link.target.startsWith('http') || link.target.startsWith('mailto:') || link.target.startsWith('#')) continue;
+
+    // Resolve relative paths against the source file's directory
+    const sourceFileDir = path.dirname(path.join(baseDir, link.file));
+    const resolvedPath = path.resolve(sourceFileDir, link.target);
+
+    // Verify the target exists under baseDir
+    if (!fs.existsSync(resolvedPath) && !resolvedPath.startsWith(baseDir)) {
+      issues.push({
+        rule: 'broken-link',
+        file: link.file,
+        line: link.line,
+        message: `Markdown link to "${link.target}" does not exist (line ${link.line})`,
+      });
     }
   }
 }
