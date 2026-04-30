@@ -44,6 +44,8 @@ $ARGUMENTS
 
 后续步骤将通过子 agent 完成实际工作。各 agent 会自行加载所需的知识库、模板和案例，无需在此预加载。
 
+**重要：所有 agent 必须在前台同步运行，禁止使用后台模式（`run_in_background: false`）。**
+
 ### 第 3 步：全量代码研究
 
 委托 `cw-researcher` agent 对仓库进行系统性深度研究。研究员将：
