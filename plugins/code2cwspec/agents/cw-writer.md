@@ -219,15 +219,6 @@ userId: String;
 - NASL 关键字（如 `$View`, `$Entity`, `@EntityRelation` 等）
 - SQL 保留字（如 `SELECT`, `INSERT`, `TABLE`, `INDEX` 等）
 
-## 验证
-
-每生成一个文档后，逐项检查上述规范是否全部满足（格式、命名、占位符、naturalts 语法等）。全部文档生成完成后，再执行以下交叉引用验证：
-1. plan/index.md 中条目与详情文档一一对应
-2. view 引用 logic 存在，logic 引用的 view 存在
-3. entity 引用的枚举和依赖实体存在
-4. tasks 与 plan 条目对应
-5. 无残留占位符、无短路径引用、行号格式正确
-
 ## 输出
 
 所有文档生成到 `cwspec/` 下，按照 generation-manifest.json 中的路径结构组织。

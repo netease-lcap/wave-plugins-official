@@ -98,40 +98,11 @@ $ARGUMENTS
 - `frontend-views.md`、`backend-logics.md`
 - `index.md` — 任务索引
 
-### 第 6 步：LCAP 合规适配
+### 第 6 步：质量验证
 
-对所有生成文档执行以下规则：
+委托 `cw-validator` agent 对所有已生成文档执行 LCAP 合规检查和交叉引用验证，质量报告写入 `cwspec/quality-report.md`。
 
-**实体适配**：
-- 人员相关属性（userId、assigneeId、createdBy 等）→ 必须使用 `LcapUser` FK
-- 角色相关属性 → 必须使用 `LcapRole` FK
-- 部门相关属性 → 必须使用 `LcapDepartment` FK
-- 权限相关属性 → 必须使用 `LcapPermission` FK
-- 禁止创建 User、Employee、Staff、Role、Permission、Department 等自定义实体
-
-**服务逻辑过滤**：
-- 简单 CRUD（getDetail/create/update/delete/batchCreate/batchUpdate/batchDelete）→ 视为系统内置，不生成独立逻辑
-- 枚举查询/加载 → 视为系统内置，不生成独立逻辑
-- 仅保留复杂业务逻辑、多实体操作、含业务规则的接口
-
-**枚举统一**：
-- 所有枚举统一维护在 `plan/data-model/enums.md` 中
-- 禁止生成独立的 enum-*.md 文件
-
-**占位符清理**：
-- 模板中的 `<!-- PENDING -->` 标记必须在输出文档中删除，禁止残留
-
-### 第 7 步：质量验证
-
-1. **命名冲突检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与 NASL 保留字冲突
-2. **菜单结构检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确
-3. **格式检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-placeholders.mjs cwspec/` 验证无占位符残留、路径完整、行号格式正确
-4. **交叉引用检查**：使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效；plan/index.md 中条目与详情文档一一对应；view 引用 logic 存在；tasks 与 plan 条目对应
-5. **深度检查**：每个声明都有代码引用支撑；没有虚构不存在的模块或接口
-6. 最多 3 次迭代修正
-7. 质量报告写入 `cwspec/quality-report.md`
-
-### 第 8 步：报告完成情况
+### 第 7 步：报告完成情况
 
 输出：
 - 生成的目录结构概览（requirements: N 个, plan: N 个, tasks: N 个）
