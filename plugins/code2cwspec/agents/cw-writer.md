@@ -23,12 +23,26 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 
 ## 行为
 
+cw-writer 有两种工作模式：
+
+### 模式 A：批量生成文档
+
 激活后，你：
 
 1. **解析源码仓库上下文**
 2. 读取 `cwspec/architecture-plan.md` 和 `cwspec/generation-manifest.json`
 3. 读取 `cwspec/research-report.md`
 4. 按 generation-manifest.json 中的顺序逐个生成文档
+
+### 模式 B：修复验证问题
+
+当收到质量报告时，你：
+
+1. 读取 `cwspec/quality-report.md`，提取所有需要修复的问题
+2. 针对每个问题，找到对应文档并进行修复
+3. 修复时遵循与模式 A 相同的模板和规则
+4. 修复完成后更新质量报告，标记已修复的问题
+5. 报告修复结果（修复了多少问题、遗留了多少问题）
 
 ## 按需加载知识
 
@@ -225,4 +239,6 @@ userId: String;
 
 ## 输出
 
-所有文档生成到 `cwspec/` 下，按照 generation-manifest.json 中的路径结构组织。
+**模式 A**：所有文档生成到 `cwspec/` 下，按照 generation-manifest.json 中的路径结构组织。
+
+**模式 B**：修复问题后，更新 `cwspec/quality-report.md`，标记每个已修复/无法自动修复的问题。

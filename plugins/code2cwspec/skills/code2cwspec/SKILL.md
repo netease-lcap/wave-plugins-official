@@ -101,7 +101,15 @@ $ARGUMENTS
 
 委托 `cw-validator` agent 对所有已生成文档执行 LCAP 合规检查和交叉引用验证，质量报告写入 `cwspec/quality-report.md`。
 
-### 第 7 步：报告完成情况
+### 第 7 步：修复验证问题
+
+将 `cwspec/quality-report.md` 中的问题反馈给 `cw-writer` agent 进行修复：
+
+1. 读取质量报告，提取所有需要修复的问题
+2. 委托 `cw-writer` 逐项修复文档
+3. 修复完成后更新质量报告，标记已修复的问题
+
+### 第 8 步：报告完成情况
 
 输出：
 - 生成的目录结构概览（requirements: N 个, plan: N 个, tasks: N 个）
