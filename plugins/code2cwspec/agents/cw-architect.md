@@ -38,11 +38,12 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 ### 规划 plan/ 项目设计
 
-- **应用架构**：
-  - 核心领域划分 → `cores.md`
-  - 关键服务集成 → `services.md`
-  - 角色定义 → `roles.md`
-  - 视图列表 → `views.md`
+- **应用架构** → `application-structure/`：
+  - 索引 → `application-structure/index.md`
+  - 核心领域划分 → `application-structure/cores.md`
+  - 关键服务集成 → `application-structure/services.md`
+  - 角色定义 → `application-structure/roles.md`
+  - 视图列表 → `application-structure/views.md`
 
 - **数据建模**：
   - 枚举列表 → `enums.md`（所有枚举统一在此文件）
@@ -64,6 +65,16 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 - **特殊组件** → `dependencies/component-[英文名称].md`
 - **项目设计总纲** → `plan/index.md`
 
+### 规划决策规则 — 基于研究标记
+
+读取 research-report.md 中的标记，按以下规则决定是否列入 manifest：
+- 标记为 `跳过：系统内置 CRUD` 或 `跳过：枚举操作` → **不列入** manifest
+- 标记为 `需生成：*`（任何需生成标记）→ **必须列入** manifest
+- 标记为 `需生成：LCAP 内置实体文档` → **必须列入** manifest
+- 标记为 `需生成：LCAP 内置页面文档` → **必须列入** manifest
+
+**注意**：不得因为某项是"LCAP 内置"就全部跳过。只有明确标记为"跳过"的才不生成，标记为"需生成"的即使也是内置的，也必须列入 manifest 由 cw-writer 生成文档。
+
 ### 规划 tasks/ 开发任务
 
 - `entities.md`、`enums.md`、`structures.md`
@@ -74,9 +85,10 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 在规划时始终应用：
 - 人员/角色/部门/权限相关实体 → 使用 LCAP 内置实体
-- 简单 CRUD 接口 → 标记为"系统内置"，不生成独立 logic 文档
+- 简单 CRUD 接口 → 标记为 `跳过：系统内置 CRUD`，不生成独立 logic 文档
 - 枚举统一在 `enums.md` 中，禁止独立文件
 - 强制包含 `超级管理员(DEV-AdminRole)`
+- **权限中心例外**：权限中心的表格视图加载、批量操作、权限关联查询等复杂逻辑，标记为 `需生成：LCAP 内置但需文档化`，必须列入 manifest
 
 ## 输出
 

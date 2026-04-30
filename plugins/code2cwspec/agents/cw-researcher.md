@@ -76,7 +76,9 @@ description: 专家级代码分析师，全量扫描代码库，提取数据模�
   - .NET：`enum` 类型
   - Java：`enum` 类型、`@Dict` 注解
   - 其他语言对应的枚举/常量
-- **LCAP 适配标记**：人员/角色/部门/权限相关属性，标记为需要映射到 LCAP 内置实体
+- **LCAP 适配标记**：
+  - 人员/角色/部门/权限相关属性，标记为需要映射到 LCAP 内置实体。
+  - 若代码中存在 LcapUser/LcapDepartment/LcapRole/LcapPermission/LcapResource 等实体定义，标记为 `需生成：LCAP 内置实体文档`（而非简单标记为"内置实体，跳过"）。
 
 ### 迭代 4：前端页面提取
 
@@ -90,23 +92,31 @@ description: 专家级代码分析师，全量扫描代码库，提取数据模�
   - 交互操作（增删改查按钮、搜索框、筛选器、导出等）
   - 页面调用的 API 端点
   - 特殊组件需求（地图、视频播放器、富文本编辑器、二维码等非标准 UI）
+- **权限中心页面标记**：对权限中心相关页面（login、noAuth、permissionCenter、userManagement、roleManagement、departmentManagement、permissionManagement），标记为 `需生成：LCAP 内置页面文档`。这些页面虽然是平台内置的，但仍需要完整的视图文档。
 
 ### 迭代 5：后端服务提取
 
-- **扫描所有控制器/API 端点**：
-  - .NET：`[Controller]`、`[ApiController]`、`[Route]`、`[HttpGet]` 等
-  - Java：`@RestController`、`@Controller`、`@RequestMapping`
-  - Node.js：Express routes、Koa routers 等
-- **对每个接口提取**：
-  - HTTP 方法、路由路径
-  - 输入参数（请求体、查询参数、路由参数）
-  - 返回值/响应格式
-  - 业务逻辑调用链（Controller → Service → Repository）
-  - 业务规则和验证逻辑
-- **LCAP 适配标记**：
-  - 简单 CRUD 接口（单实体 getDetail/create/update/delete/batchCreate/batchUpdate/batchDelete）→ 标记为"系统内置"
-  - 枚举相关操作（查询、加载、列表）→ 标记为"系统内置"
-  - 仅保留复杂业务逻辑、多实体操作
+**第一步：枚举所有控制器/API 端点文件**
+- 必须先完整列出所有控制器文件的路径，不得遗漏：
+  - .NET：所有包含 `[Controller]` 或 `[ApiController]` 属性的文件
+  - Java：所有 `*Controller.java`、`*RestController.java` 文件
+  - Node.js：所有 routes 文件
+- **关键规则**：先输出完整文件列表，再逐个分析。禁止只看部分文件就下结论。
+
+**第二步：对每个控制器提取接口信息**
+- HTTP 方法、路由路径
+- 输入参数（请求体、查询参数、路由参数）
+- 返回值/响应格式
+- 业务逻辑调用链（Controller → Service → Repository）
+- 业务规则和验证逻辑
+
+**LCAP 适配标记（精细化分类）**：
+- 简单 CRUD 接口（单实体 getDetail/create/update/delete/batchCreate/batchUpdate/batchDelete）→ 标记为 `跳过：系统内置 CRUD`
+- 枚举相关操作（查询、加载枚举列表）→ 标记为 `跳过：枚举操作`
+- 权限中心复杂逻辑（*TableView 表格视图加载、Batch* 批量操作、权限/角色关联查询、部门层级操作、用户登录认证）→ 标记为 `需生成：LCAP 内置但需文档化`
+- 其他复杂业务逻辑、多实体操作→ 标记为 `需生成：复杂业务逻辑`
+
+**自检**：扫描完成后，统计检测到的接口数量，与控制器文件数量对比。如果接口数远少于控制器数，说明有遗漏，需要重新扫描。
 
 ### 迭代 6：综合 — 术语提取 + 集成映射
 

@@ -94,6 +94,11 @@ userId: String;
 - **不生成**：枚举查询/加载操作
 - **仅生成**：复杂业务逻辑、多实体操作、含业务规则的接口
 
+**最高优先级规则**：generation-manifest.json 是 cw-writer 的**唯一任务清单**。
+- manifest 中列出的每个文档**必须生成**，不得以任何理由跳过。
+- 上述过滤规则仅用于在 architect 阶段辅助判断是否应将某条目列入 manifest。
+- 一旦条目进入 manifest，cw-writer 的职责是忠实执行，不得自行过滤。
+
 ### 枚举统一管理
 
 所有枚举统一维护在 `plan/data-model/enums.md` 中。禁止生成、引用或依赖任何独立的枚举详情文件（如 `enum-*.md`）。
