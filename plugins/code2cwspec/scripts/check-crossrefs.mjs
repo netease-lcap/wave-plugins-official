@@ -113,7 +113,7 @@ function extractMarkdownLinks(dir) {
       const linkPath = m[2].replace(/^[\/]/, ''); // strip leading /
       const lineNum = content.substring(0, m.index).split('\n').length;
       links.push({
-        file: path.relative(process.cwd(), file),
+        file: path.relative(baseDir, file),
         line: lineNum,
         text: m[1],
         target: linkPath,
