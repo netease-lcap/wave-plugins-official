@@ -79,8 +79,7 @@ $ARGUMENTS
 - `standard/terms.md` — 术语表（权限角色 + 业务术语）
 - `standard/business.md` — 整体业务
 - `standard/cooperations.md` — 功能协作
-- `standard/module-*.md` — 每个功能模块详情
-- `index.md` — 需求大纲
+- `standard/module-*.md` — 每个功能模块一个独立文件（如 module-customer-management.md、module-purchase-management.md）
 - `persistent/` — 菜单、关联段落、预检查、检查清单
 
 **Phase B — plan/**（项目设计）
@@ -88,7 +87,7 @@ $ARGUMENTS
 - `data-model/` — 数据建模（枚举、实体详情、ER 图）
 - `ui-design.md` — UI/UE 规范
 - `frontend/` — 前端业务模块（路由索引、页面详情）
-- `backend/` — 后端领域服务（服务索引、逻辑详情）
+- `backend/` — 后端领域服务（服务索引、逻辑详情；**一函数一文**，每个后端逻辑函数独立文件）
 - `integration/` — 外部集成
 - `dependencies/` — 特殊组件
 - `index.md` — 项目设计总纲

@@ -107,9 +107,8 @@ userId: String;
 1. `standard/terms.md`
 2. `standard/business.md`
 3. `standard/cooperations.md`
-4. `standard/module-*.md`（多个模块可并行）
-5. `index.md`
-6. `persistent/menus.md`、`point.md`、`precheck.md`、`checklist.md`
+4. `standard/module-[模块英文名].md`（每个业务模块一个独立文件，多个模块可并行）
+5. `persistent/menus.md`、`point.md`、`precheck.md`、`checklist.md`
 
 ### Phase B — plan/
 
@@ -121,7 +120,7 @@ userId: String;
 6. `frontend/index.md`、`routes.md`
 7. `frontend/view-*.md`（多个页面可并行）
 8. `backend/index.md`
-9. `backend/logic-*.md`（多个逻辑可并行）
+9. `backend/logic-[函数英文名].md`（每个后端逻辑函数一个独立文件，一函数一文，多个可并行）
 10. `integration/`、`dependencies/`
 11. `plan/index.md`
 

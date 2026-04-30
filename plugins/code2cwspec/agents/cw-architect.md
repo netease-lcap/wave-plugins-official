@@ -57,7 +57,7 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 - **后端领域服务**：
   - 服务索引 → `backend/index.md`
-  - 每个服务逻辑详情 → `backend/logic-[英文名称].md`
+  - 每个后端逻辑函数一个独立文件 → `backend/logic-[函数英文名称].md`（一函数一文，禁止将多个逻辑合并到同一文件）
 
 - **UI/UE 规范** → `ui-design.md`
 - **外部集成** → `integration/index.md` + `items.md`
@@ -88,6 +88,16 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 
 2. **`cwspec/generation-manifest.json`** — JSON 格式的生成清单：
 
+**Requirements 关键规则**：
+- `business.md` 是整体业务概述，一个文件
+- 每个业务模块必须生成独立的 `module-[模块英文名].md`，**禁止合并为单个文件**
+- 示例：`module-customer-management.md`、`module-purchase-management.md`、`module-permission-center.md`
+
+**Plan/Backend 关键规则**：
+- **每个后端逻辑函数一个独立文件**，文件名为 `logic-[函数camelCase名].md`
+- **禁止将多个逻辑函数合并到同一文件**
+- 示例：`logic-loadCustomerList.md`、`logic-getCustomerDetail.md`、`logic-updateCustomer.md`（而不是合并为 `logic-customer.md`）
+
 ```json
 {
   "phases": [
@@ -98,6 +108,24 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
           "path": "requirements/standard/terms.md",
           "template": "requirements/standard/terms-template.md",
           "inputs": ["角色术语列表", "业务术语列表"],
+          "dependsOn": []
+        },
+        {
+          "path": "requirements/standard/business.md",
+          "template": "requirements/standard/business-template.md",
+          "inputs": ["整体业务概述"],
+          "dependsOn": []
+        },
+        {
+          "path": "requirements/standard/module-customer-management.md",
+          "template": "requirements/standard/module-template.md",
+          "inputs": ["客户管理模块详细需求"],
+          "dependsOn": []
+        },
+        {
+          "path": "requirements/standard/module-purchase-management.md",
+          "template": "requirements/standard/module-template.md",
+          "inputs": ["采购管理模块详细需求"],
           "dependsOn": []
         }
       ]
@@ -110,6 +138,18 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
           "template": "plan/data-model/entity-template.md",
           "inputs": ["Customer 实体定义", "依赖的枚举和实体"],
           "dependsOn": ["requirements/standard/terms.md"]
+        },
+        {
+          "path": "plan/backend/logic-loadCustomerList.md",
+          "template": "plan/backend/logic-template.md",
+          "inputs": ["loadCustomerList 逻辑签名、功能要点、前端调用关系"],
+          "dependsOn": ["plan/data-model/entity-Customer.md"]
+        },
+        {
+          "path": "plan/backend/logic-getCustomerDetail.md",
+          "template": "plan/backend/logic-template.md",
+          "inputs": ["getCustomerDetail 逻辑签名、功能要点、前端调用关系"],
+          "dependsOn": ["plan/data-model/entity-Customer.md"]
         }
       ]
     },
