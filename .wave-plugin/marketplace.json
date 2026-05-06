@@ -15,9 +15,9 @@
       "source": "./plugins/typescript-lsp"
     },
     {
-      "name": "chrome-headless",
-      "description": "Chrome DevTools Protocol MCP server for headless browser automation",
-      "source": "./plugins/chrome-headless"
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools Protocol MCP server for browser automation",
+      "source": "./plugins/chrome-devtools"
     },
     {
       "name": "code2spec",
