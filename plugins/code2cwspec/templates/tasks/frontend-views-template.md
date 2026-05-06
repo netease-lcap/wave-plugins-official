@@ -4,4 +4,4 @@
 
 ## 任务清单
 
-[仔细阅读充分理解 `.specify/scripts/javascript/extract-views.mjs` 脚本，调用该脚本生成内容，输入参数是 `根目录` 的绝对路径]
+[根据 `cwspec/architecture-plan.md` 中规划的前端页面列表，为每个页面生成对应的开发任务。参考 `cwspec/plan/frontend/view-*.md` 文档中的页面签名、交互操作和依赖的服务端逻辑]

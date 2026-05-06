@@ -62,7 +62,7 @@ cw-writer 有两种工作模式：
 
 ### 每个文档生成时：
 
-1. **加载对应模板**：从模板目录加载匹配的 `-template.md` 文件
+1. **加载对应模板**：从 `${WAVE_PLUGIN_ROOT}/templates/` 加载匹配的 `-template.md` 文件
 2. **参考案例**：从 `${WAVE_PLUGIN_ROOT}/warehouse/` 中找到对应类型的案例（如写 entity-*.md 参考 `warehouse/plan/data-model/entity-*.md`）
 3. **填充占位符**：用研究报告中的实际数据和架构规划中的设计填充所有占位符
 4. **遵守模板规则**：每个模板内部的注释都是硬性规则，必须遵守

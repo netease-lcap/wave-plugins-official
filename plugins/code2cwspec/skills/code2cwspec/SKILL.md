@@ -40,6 +40,8 @@ $ARGUMENTS
 - `cwspec/tasks/` — 开发任务
 - `cwspec/quality-report.md` — 质量报告
 
+**模板目录**：`${WAVE_PLUGIN_ROOT}/templates/`，子 agent 按需直接从插件目录读取。
+
 ### 第 2 步：委托子 Agent
 
 后续步骤将通过子 agent 完成实际工作。各 agent 会自行加载所需的知识库、模板和案例，无需在此预加载。

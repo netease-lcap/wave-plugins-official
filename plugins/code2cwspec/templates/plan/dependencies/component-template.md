@@ -1,7 +1,8 @@
 <!--
-  本模板包含两种写入方式。模板选择由 AI 根据查询结果判断后通过脚本获取：
-  1) 先调用 node .specify/scripts/javascript/render-component-template.mjs [关键词1] [关键词2] [关键词3] 得到依赖库查询结果；
-  2) AI 根据结果判断能否满足需求，能则调用 ... --import 获取「引用依赖库」模板块，否则调用 ... --create 获取「创建组件」模板块。
+  本模板包含两种写入模式：
+  - @mode: create — 当需要自定义创建新组件时使用
+  - @mode: import — 当可以引用已有依赖库时使用
+  AI 根据实际需求选择合适的模式。
 -->
 
 <!-- @mode: create -->
