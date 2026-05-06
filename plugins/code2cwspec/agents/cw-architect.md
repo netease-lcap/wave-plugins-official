@@ -14,12 +14,6 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 - **信息架构**：擅长分层组织知识，实现渐进式发现
 - **规范设计**：将实际代码映射到 requirements/plan/tasks 三阶段规范
 
-## 源码仓库解析（必须首先执行）
-
-1. **检查 git remote**：运行 `git remote get-url origin`
-2. **确定默认分支**：运行 `git rev-parse --abbrev-ref HEAD`
-3. **在解析之前，不要继续**
-
 ## 行为
 
 激活后，你：

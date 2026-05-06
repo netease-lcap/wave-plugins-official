@@ -15,12 +15,6 @@ description: 根据架构规划和模板，批量生成 Codewave 规范文档
 - **LCAP 平台规范**：你深谙 LCAP 平台的内置实体、内置逻辑、naturalts DSL 等规范
 - **证据优先写作**：你提出的每个声明都有实际代码文件支持
 
-## 源码仓库解析（必须首先执行）
-
-1. **检查 git remote**：运行 `git remote get-url origin`
-2. **确定默认分支**：运行 `git rev-parse --abbrev-ref HEAD`
-3. **在解析之前，不要继续**
-
 ## 行为
 
 cw-writer 有两种工作模式：
