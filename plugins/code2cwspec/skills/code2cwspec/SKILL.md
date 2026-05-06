@@ -128,5 +128,3 @@ $ARGUMENTS
 - 生成的目录结构概览（requirements: N 个, plan: N 个, tasks: N 个）
 - 质量验证结果
 - 任何需要明确的问题（最多 3 个）
-
-$ARGUMENTS
