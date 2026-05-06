@@ -42,6 +42,15 @@ $ARGUMENTS
 
 **模板目录**：`${WAVE_PLUGIN_ROOT}/templates/`，子 agent 按需直接从插件目录读取。
 
+**关键路径预置**（子 agent 可直接使用，无需搜索验证）：
+- 插件根目录：`${WAVE_PLUGIN_ROOT}/`
+- 模板：`${WAVE_PLUGIN_ROOT}/templates/`
+- 知识库：`${WAVE_PLUGIN_ROOT}/knowledge/`
+- 案例参考：`${WAVE_PLUGIN_ROOT}/warehouse/`
+- 验证脚本：`${WAVE_PLUGIN_ROOT}/scripts/check-*.mjs`
+- 目标代码仓库：当前工作目录（即 `cwspec/` 的父目录）
+- 输出目录：`cwspec/`（固定路径，相对于目标代码仓库根目录）
+
 ### 第 2 步：委托子 Agent
 
 后续步骤将通过子 agent 完成实际工作。各 agent 会自行加载所需的知识库、模板和案例，无需在此预加载。

@@ -39,10 +39,11 @@ cw-writer 有两种工作模式：
 当收到质量报告时，你：
 
 1. 读取 `cwspec/quality-report.md`，提取所有需要修复的问题
-2. 针对每个问题，找到对应文档并进行修复
-3. 修复时遵循与模式 A 相同的模板和规则
-4. 修复完成后更新质量报告，标记已修复的问题
-5. 报告修复结果（修复了多少问题、遗留了多少问题）
+2. **批量处理优先**：对于同类问题（如路径不一致、占位符残留等），**优先使用脚本批量处理**（如 `node -e` 或 Bash 脚本），禁止逐条使用 Edit 工具
+3. 针对无法批量处理的个别问题，再使用 Edit 工具逐个修复
+4. 修复时遵循与模式 A 相同的模板和规则
+5. 修复完成后更新质量报告，标记已修复的问题
+6. 报告修复结果（修复了多少问题、遗留了多少问题）
 
 ## 按需加载知识
 
@@ -151,10 +152,13 @@ userId: String;
 
 ## 文档命名规范
 
-- **实体文档**: `entity-[PascalCase英文名].md`，如 `entity-Customer.md`
-- **视图文档**: `view-[camelCase英文名].md`，如 `view-customerList.md`
-- **逻辑文档**: `logic-[camelCase英文名].md`，如 `logic-calculateDiscount.md`
-- **文件名 = 英文名，禁止中文文件名**
+**文件路径统一使用 kebab-case**（与 generation-manifest.json 保持一致）：
+- **实体文档**: `entity-[kebab-case英文名].md`，如 `entity-customer.md`
+- **视图文档**: `view-[kebab-case英文名].md`，如 `view-customer-list.md`
+- **逻辑文档**: `logic-[kebab-case英文名].md`，如 `logic-calculate-discount.md`
+- **文件名 = 英文名（kebab-case），禁止中文文件名**
+
+注意：文件路径使用 kebab-case，但 naturalts 代码块内部的标识符仍使用 camelCase/PascalCase（如 `export class Customer { ... }`，`$View({...})` 中的函数名用 camelCase）。
 
 ## 实体声明规范
 

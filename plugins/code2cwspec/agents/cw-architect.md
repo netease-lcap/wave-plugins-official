@@ -65,6 +65,17 @@ description: 基于代码研究报告，规划 Codewave 规范的文档结构和
 - **特殊组件** → `dependencies/component-[英文名称].md`
 - **项目设计总纲** → `plan/index.md`
 
+### 命名规范强制（最高优先级）
+
+**所有 generation-manifest.json 中的文件路径必须统一使用 kebab-case**：
+- 实体：`entity-customer.md`（不是 `entity-Customer` 或 `entity-customerList`）
+- 视图：`view-customer-list.md`（不是 `view-customerList`）
+- 逻辑：`logic-load-customer-list.md`（不是 `logic-loadCustomerList`）
+- 模块：`module-customer-management.md`
+- **禁止混用 camelCase、PascalCase 或 snake_case**
+
+此规范必须在生成 manifest 时严格执行，否则下游 cw-writer 会产生系统性路径不一致，导致大量返工。
+
 ### 规划决策规则 — 基于研究标记
 
 读取 research-report.md 中的标记，按以下规则决定是否列入 manifest：
