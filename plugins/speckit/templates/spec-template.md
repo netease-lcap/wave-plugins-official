@@ -1,101 +1,101 @@
-# Feature Specification: [FEATURE NAME]
+# 功能规格说明：[功能名称]
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Input**: User description: "$ARGUMENTS"
+**功能分支**：`[###-feature-name]`
+**创建日期**：[日期]
+**输入**：用户描述："$ARGUMENTS"
 
-## User Scenarios & Testing *(mandatory)*
+## 用户场景与测试 *(必填)*
 
 <!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
+  重要：用户故事应按重要性排序，作为用户旅程进行优先级排序。
+  每个用户故事/旅程必须可以独立测试——这意味着如果你只实现其中一个，
+  你仍然应该有一个可以交付价值的最小可行产品(MVP)。
+
+  为每个故事分配优先级（P1、P2、P3 等），其中 P1 是最关键的。
+  把每个故事看作一个独立的功能切片，可以：
+  - 独立开发
+  - 独立测试
+  - 独立部署
+  - 独立向用户演示
 -->
 
-### User Story 1 - [Brief Title] (Priority: P1)
+### 用户故事 1 - [简短标题] (优先级：P1)
 
-[Describe this user journey in plain language]
+[用通俗语言描述此用户旅程]
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**优先级原因**：[解释价值以及为什么具有此优先级]
 
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**独立测试**：[描述如何独立测试——例如，"可以通过[具体操作]完全测试，并交付[具体价值]"]
 
-**Acceptance Scenarios**:
+**验收场景**：
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **假设** [初始状态]，**当** [操作]，**那么** [预期结果]
+2. **假设** [初始状态]，**当** [操作]，**那么** [预期结果]
 
 ---
 
-### User Story 2 - [Brief Title] (Priority: P2)
+### 用户故事 2 - [简短标题] (优先级：P2)
 
-[Describe this user journey in plain language]
+[用通俗语言描述此用户旅程]
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**优先级原因**：[解释价值以及为什么具有此优先级]
 
-**Independent Test**: [Describe how this can be tested independently]
+**独立测试**：[描述如何独立测试]
 
-**Acceptance Scenarios**:
+**验收场景**：
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-
----
-
-### User Story 3 - [Brief Title] (Priority: P3)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
-
-**Acceptance Scenarios**:
-
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **假设** [初始状态]，**当** [操作]，**那么** [预期结果]
 
 ---
 
-[Add more user stories as needed, each with an assigned priority]
+### 用户故事 3 - [简短标题] (优先级：P3)
 
-### Edge Cases
+[用通俗语言描述此用户旅程]
+
+**优先级原因**：[解释价值以及为什么具有此优先级]
+
+**独立测试**：[描述如何独立测试]
+
+**验收场景**：
+
+1. **假设** [初始状态]，**当** [操作]，**那么** [预期结果]
+
+---
+
+[根据需要添加更多用户故事，每个都分配优先级]
+
+### 边界情况
 
 <!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
+  需要操作：本节内容代表占位符。
+  请填写正确的边界情况。
 -->
 
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- 当 [边界条件] 时会发生什么？
+- 系统如何处理 [错误场景]？
 
-## Requirements *(mandatory)*
+## 需求 *(必填)*
 
 <!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
+  需要操作：本节内容代表占位符。
+  请填写正确的功能需求。
 -->
 
-### Functional Requirements
+### 功能需求
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**：系统必须 [具体能力，例如"允许用户创建账户"]
+- **FR-002**：系统必须 [具体能力，例如"验证电子邮件地址"]
+- **FR-003**：用户必须能够 [关键交互，例如"重置密码"]
+- **FR-004**：系统必须 [数据需求，例如"持久化用户偏好"]
+- **FR-005**：系统必须 [行为，例如"记录所有安全事件"]
 
-*Example of marking unclear requirements:*
+*标记不明确需求的示例：*
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+- **FR-006**：系统必须通过 [需要澄清：未指定认证方式——电子邮件/密码、SSO、OAuth？] 认证用户
+- **FR-007**：系统必须保留用户数据 [需要澄清：未指定保留期限]
 
-### Key Entities *(include if feature involves data)*
+### 关键实体 *(如果功能涉及数据则包含)*
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+- **[实体 1]**：[代表什么，关键属性，不含实现细节]
+- **[实体 2]**：[代表什么，与其他实体的关系]
 

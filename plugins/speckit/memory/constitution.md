@@ -1,31 +1,80 @@
-# [PROJECT_NAME] Constitution
+# 项目宪章
 
-## Core Principles
+**项目名称**：[项目名称]
+**版本**：1.0.0
+**创建日期**：[日期]
+**最后更新**：[日期]
 
-### I. [PRINCIPLE_1_NAME]
-[PRINCIPLE_1_DESCRIPTION]
+## 概述
 
-**Rationale**: [PRINCIPLE_1_RATIONALE]
+本文档定义项目的核心原则、技术标准和不可协商的规则。宪章作为所有决策和实现的指导框架。
 
-### II. [PRINCIPLE_2_NAME]
-[PRINCIPLE_2_DESCRIPTION]
+## 核心原则
 
-**Rationale**: [PRINCIPLE_2_RATIONALE]
+### 1. [原则名称]
 
-### III. [PRINCIPLE_3_NAME]
-[PRINCIPLE_3_DESCRIPTION]
+**规则**：[明确的规则声明，使用"必须"或"应该"]
 
-**Rationale**: [PRINCIPLE_3_RATIONALE]
+**原因**：[此原则存在的原因]
 
-## Governance
+**验证**：[如何验证是否遵循此原则]
 
-This constitution defines the core values and non-negotiable rules for the [PROJECT_NAME] project. All contributions and architectural decisions must align with these principles.
+### 2. [原则名称]
 
-**Amendment Process**: Changes to this constitution require a clear rationale and an assessment of the impact on existing artifacts (specs, plans, tasks).
+**规则**：[明确的规则声明]
 
-**Version Control**: This document uses semantic versioning.
-- MAJOR: Removal or fundamental change of a core principle.
-- MINOR: Addition of a new principle or significant clarification.
-- PATCH: Minor wording fixes or formatting updates.
+**原因**：[此原则存在的原因]
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+**验证**：[如何验证是否遵循此原则]
+
+### 3. [原则名称]
+
+**规则**：[明确的规则声明]
+
+**原因**：[此原则存在的原因]
+
+**验证**：[如何验证是否遵循此原则]
+
+## 示例原则
+
+以下是常见原则示例，根据项目需求调整：
+
+### 类型安全
+
+**规则**：所有公共 API 必须有明确的类型签名
+
+**原因**：提高代码可维护性和减少运行时错误
+
+**验证**：类型检查器通过，无 `any` 类型在公共 API 中
+
+### 测试覆盖
+
+**规则**：核心业务逻辑必须有单元测试覆盖
+
+**原因**：确保功能正确性和便于重构
+
+**验证**：测试覆盖率报告显示核心模块覆盖率 >= 80%
+
+### 文档极简
+
+**规则**：只为复杂或非显而易见的逻辑添加注释
+
+**原因**：避免维护负担和过时文档
+
+**验证**：代码审查确认无冗余注释
+
+## 治理
+
+### 修改流程
+
+1. 提出修改建议并通过团队讨论
+2. 评估对现有代码的影响
+3. 更新本文档并通知所有相关方
+4. 在下一个迭代中实施
+
+### 例外处理
+
+当需要违反宪章原则时：
+1. 在代码中明确记录例外原因
+2. 在拉取请求中说明例外情况
+3. 获得至少一名其他开发者的批准

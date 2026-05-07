@@ -1,59 +1,58 @@
-# Implementation Plan: [FEATURE]
+# 实现计划：[功能]
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `./spec.md`
+**分支**：`[###-feature-name]` | **日期**：[日期] | **规格**：[链接]
+**输入**：来自 `./spec.md` 的功能规格说明
 
-**Note**: This template is filled in by the `/plan` command.
+**注意**：此模板由 `/plan` 命令填写。
 
-## Summary
+## 概述
 
-[Extract from feature spec: primary requirement + technical approach from research]
+[从功能规格中提取：主要需求 + 从研究中得出的技术方法]
 
-## Technical Context
+## 技术上下文
 
 <!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project.
+  需要操作：将本节内容替换为项目的技术细节。
 -->
 
-**Language/Version**: [e.g., Python 3.11, TypeScript 5.0, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, React, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, Redis, files or N/A]  
-**Testing**: [e.g., pytest, Vitest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, Browser, WASM or NEEDS CLARIFICATION]
-**Project Type**: [e.g., CLI, Web, Mobile, Library]  
-**Performance Goals**: [e.g., <200ms response time, 1000 req/s or N/A]  
-**Constraints**: [e.g., <100MB memory, offline-capable or N/A]  
+**语言/版本**：[例如 Python 3.11、TypeScript 5.0、Rust 1.75 或 需要澄清]
+**主要依赖**：[例如 FastAPI、React、LLVM 或 需要澄清]
+**存储**：[如适用，例如 PostgreSQL、Redis、文件 或 不适用]
+**测试**：[例如 pytest、Vitest、cargo test 或 需要澄清]
+**目标平台**：[例如 Linux 服务器、浏览器、WASM 或 需要澄清]
+**项目类型**：[例如 CLI、Web、移动端、库]
+**性能目标**：[例如 <200ms 响应时间、1000 请求/秒 或 不适用]
+**约束**：[例如 <100MB 内存、离线可用 或 不适用]
 
-## Constitution Check
+## 宪章检查
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*门禁：必须在阶段 0 研究之前通过。在阶段 1 设计后重新检查。*
 
-[Gates determined based on constitution file]
+[根据宪章文件确定的门禁]
 
-**REQUIRED**: All planning phases MUST align with the project constitution. All implementation tasks SHOULD be clearly defined and testable.
-- All planning phases MUST be performed using the **general-purpose agent** to reduce context costs of the main agent.
+**必需**：所有规划阶段必须符合项目宪章。所有实现任务应该明确定义且可测试。
+- 所有规划阶段必须使用 **通用代理** 执行，以减少主代理的上下文成本。
 
-## Project Structure
+## 项目结构
 
-### Documentation (this feature)
+### 文档（本功能）
 
 ```
 specs/[###-feature]/
-├── plan.md              # This file (/plan command output)
-├── research.md          # Phase 0 output (/plan command)
-├── data-model.md        # Phase 1 output (/plan command)
-├── quickstart.md        # Phase 1 output (/plan command) - USER FACING
-├── contracts/           # Phase 1 output (/plan command)
-└── tasks.md             # Phase 2 output (/tasks command)
+├── plan.md              # 本文件（/plan 命令输出）
+├── research.md          # 阶段 0 输出（/plan 命令）
+├── data-model.md        # 阶段 1 输出（/plan 命令）
+├── quickstart.md        # 阶段 1 输出（/plan 命令）- 面向用户
+├── contracts/           # 阶段 1 输出（/plan 命令）
+└── tasks.md             # 阶段 2 输出（/tasks 命令）
 ```
 
-**Note on quickstart.md**: This file MUST be written for the end-user. Focus on "How to use this feature".
+**关于 quickstart.md 的说明**：此文件必须为最终用户编写。重点在于"如何使用此功能"。
 
-### Source Code (repository root)
+### 源代码（仓库根目录）
 <!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature.
+  需要操作：将下面的占位符树替换为
+  此功能的具体布局。
 -->
 
 ```
@@ -69,12 +68,12 @@ tests/
 └── unit/
 ```
 
-**Structure Decision**: [Document the selected structure]
+**结构决策**：[记录所选结构]
 
-## Complexity Tracking
+## 复杂度跟踪
 
-*Fill ONLY if Constitution Check has violations that must be justified*
+*仅在宪章检查有需要说明的违规时填写*
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., New dependency] | [current need] | [why existing tools are insufficient] |
+| 违规项 | 为何需要 | 被拒绝的更简单替代方案及原因 |
+|--------|----------|------------------------------|
+| [例如 新依赖] | [当前需求] | [为何现有工具不足] |

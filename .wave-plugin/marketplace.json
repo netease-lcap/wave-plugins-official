@@ -36,13 +36,8 @@
     },
     {
       "name": "speckit",
-      "description": "Specification and planning toolkit for software engineering tasks.",
-      "source": "./plugins/speckit"
-    },
-    {
-      "name": "speckit-cn",
       "description": "规范驱动开发工具包（中文版）- 用于软件工程任务的规格说明与规划。",
-      "source": "./plugins/speckit-cn"
+      "source": "./plugins/speckit"
     },
     {
       "name": "deep-wiki",
