@@ -21,3 +21,14 @@ To make a plugin visible in the marketplace, it must be explicitly registered in
   "source": "./plugins/plugin-name"
 }
 ```
+
+## Removing a Plugin from Marketplace
+To remove a plugin from the marketplace:
+
+1. Remove the corresponding entry from `.wave-plugin/marketplace.json`.
+2. Optionally delete the plugin directory under `plugins/`.
+
+## Sync README
+Whenever a plugin is added or removed, update `README.md` to reflect the change:
+- Add/remove the plugin entry in the **插件列表** table.
+- Update the **目录结构** section if a directory was added or deleted.
