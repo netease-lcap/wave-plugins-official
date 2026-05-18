@@ -63,6 +63,11 @@
       "name": "superpowers",
       "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
       "source": "https://github.com/netease-lcap/superpowers.git"
+    },
+    {
+      "name": "wave-requirements",
+      "description": "Wave 官方需求管理 MCP 服务器",
+      "source": "./plugins/wave-requirements"
     }
   ]
 }
