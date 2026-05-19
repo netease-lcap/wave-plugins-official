@@ -11,15 +11,13 @@ allowed-tools:
 
 ## Context
 
-- PR info: !`gh pr view --json headRefName,state,statusCheckRollup --jq '{branch: .headRefName, state: .state, checks: (.statusCheckRollup | length)}' 2>/dev/null || echo '{}'`
+- PR info: !`gh pr view --json headRefName,state --jq '{branch: .headRefName, state: .state}' 2>/dev/null || echo '{}'`
 
 ## Your task
 
 Watch the current PR checks and merge it with rebase once they pass.
 
-If the `checks` field in "PR info" is 0, skip `gh pr checks --watch` and merge directly.
-
-1. Watch checks (if count > 0): `gh pr checks --watch | tail -5`
+1. Watch checks: `gh pr checks --watch | tail -5` (if no checks configured, exits immediately)
 2. If any check fails:
    a. Fetch the failed log: `gh run view --log-failed`
    b. Analyze the log to identify the root cause
