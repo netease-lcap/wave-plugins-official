@@ -137,11 +137,11 @@ export const ProductEntity = createEntity<Product>();
    - 任何角色相关属性 → 必须列出 LcapRole
    - 任何部门相关属性 → 必须列出 LcapDepartment
 -->
-<!-- 强制要求：所有枚举都统一维护在 plan/data-model/enums.md 这一个文件内；这里的依赖路径也必须始终指向该文件，禁止生成、引用或依赖任何单独的枚举详情文件，例如 enum-*.md、enum-[枚举英文名称].md、enum-[枚举中文名称].md 等路径都一律不允许出现 -->
-- **数据建模-枚举-[依赖枚举中文名称]**：[数据建模-枚举-[依赖枚举中文名称]（plan/data-model/enums.md）的路径] 
-- **数据建模-实体-[依赖实体中文名称]**：[数据建模-实体-[依赖实体中文名称]（plan/data-model/entity-[依赖实体英文名称].md）的路径]
+<!-- 强制要求：所有枚举都统一维护在 plan/data-model/数据建模-枚举.md 这一个文件内；这里的依赖路径也必须始终指向该文件，禁止生成、引用或依赖任何单独的枚举详情文件，例如 enum-*.md、enum-[枚举英文名称].md、enum-[枚举中文名称].md 等路径都一律不允许出现 -->
+- **数据建模-枚举-[依赖枚举中文名称]**：[数据建模-枚举-[依赖枚举中文名称]（plan/data-model/数据建模-枚举.md）的路径] 
+- **数据建模-实体-[依赖实体中文名称]**：[数据建模-实体-[依赖实体中文名称]（plan/data-model/[子域]-实体-[依赖实体中文名称]（[依赖实体英文名称]）.md）的路径]
 
 <!-- 示例数据，仅供参考（特别注意：内置实体必须填写对应路径，不必考虑路径是否有对应文件）：
-- **数据建模-实体-用户**：plan/data-model/entity-LcapUser.md
-- **数据建模-实体-部门**：plan/data-model/entity-LcapDepartment.md
+- **数据建模-实体-用户**：plan/data-model/权限中心-实体-用户（LcapUser）.md
+- **数据建模-实体-部门**：plan/data-model/权限中心-实体-部门（LcapDepartment）.md
 -->

@@ -8,8 +8,7 @@
  * Validates:
  *   1. Entity references (FK fields) match defined entity files
  *   2. View references match defined view files
- *   3. Logic references match defined logic files
- *   4. Markdown links point to existing files
+ *   3. Markdown links point to existing files
  *
  * Options:
  *   --base <dir>   Base directory to scan (default: current directory)
@@ -42,15 +41,51 @@ function findFiles(dir, pattern) {
   return results;
 }
 
-/** Extract entity/view/logic names from files */
-function extractDefinitions(dir, prefixPattern) {
-  const files = findFiles(dir, prefixPattern);
+/** Extract entity names from Chinese+English hybrid filenames like 权限中心-实体-用户（LcapUser）.md */
+function extractEntityDefinitions(dir) {
+  const entityFiles = findFiles(dir, /^.*-实体-.*（[^）]+）\.md$/);
   const names = new Set();
-  for (const file of files) {
+  for (const file of entityFiles) {
     const baseName = path.basename(file);
-    const match = baseName.match(/^(entity|view|logic|enum)-([^.]+)\.md$/);
+    // Extract English name from full-width parentheses: 权限中心-实体-用户（LcapUser）.md → LcapUser
+    const match = baseName.match(/[（(]([A-Za-z][A-Za-z0-9_]*)[）)]\.md$/);
     if (match) {
-      names.add(match[2]);
+      names.add(match[1]);
+    }
+  }
+  // Also support legacy kebab-case entity-*.md files
+  const legacyFiles = findFiles(dir, /^entity-[^.]+\.md$/);
+  for (const file of legacyFiles) {
+    const baseName = path.basename(file);
+    const match = baseName.match(/^entity-([^.]+)\.md$/);
+    if (match) {
+      names.add(match[1]);
+    }
+  }
+  return names;
+}
+
+/** Extract view names from Chinese+English hybrid filenames like 权限中心-登录页（login）.md */
+function extractViewDefinitions(dir) {
+  const viewFiles = findFiles(dir, /^[^/]*[^-]*-[^（]+（[^）]+）\.md$/);
+  const names = new Set();
+  for (const file of viewFiles) {
+    const baseName = path.basename(file);
+    // Skip entity files
+    if (baseName.includes('-实体-')) continue;
+    // Extract English name from full-width parentheses
+    const match = baseName.match(/[（(]([a-z][a-zA-Z0-9_]*)[）)]\.md$/);
+    if (match) {
+      names.add(match[1]);
+    }
+  }
+  // Also support legacy kebab-case view-*.md files
+  const legacyFiles = findFiles(dir, /^view-[^.]+\.md$/);
+  for (const file of legacyFiles) {
+    const baseName = path.basename(file);
+    const match = baseName.match(/^view-([^.]+)\.md$/);
+    if (match) {
+      names.add(match[1]);
     }
   }
   return names;
@@ -58,7 +93,11 @@ function extractDefinitions(dir, prefixPattern) {
 
 /** Extract foreign entity references from entity files */
 function extractFKReferences(dir) {
-  const entityFiles = findFiles(dir, /^entity-.*\.md$/);
+  // Support both Chinese-named and kebab-case entity files
+  const entityFiles = [
+    ...findFiles(dir, /^.*-实体-.*（[^）]+）\.md$/),
+    ...findFiles(dir, /^entity-[^.]+\.md$/),
+  ];
   const refs = [];
 
   for (const file of entityFiles) {
@@ -106,7 +145,7 @@ function extractMarkdownLinks(dir) {
 
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf-8');
-    // Match [text](path/to/file.md) or (path/to/file.md)
+    // Match [text](path/to/file.md) or (path/to/file.md) — support Chinese characters in paths
     const linkReg = /\[([^\]]*)\]\(([^)]+\.md[^)]*)\)/g;
     let m;
     while ((m = linkReg.exec(content)) !== null) {
@@ -148,10 +187,9 @@ if (!fs.existsSync(baseDir)) {
 
 const issues = [];
 
-// 1. Collect all defined entities, views, logics
-const definedEntities = extractDefinitions(baseDir, /^entity-.*\.md$/);
-const definedViews = extractDefinitions(baseDir, /^view-.*\.md$/);
-const definedLogics = extractDefinitions(baseDir, /^logic-.*\.md$/);
+// 1. Collect all defined entities and views
+const definedEntities = extractEntityDefinitions(baseDir);
+const definedViews = extractViewDefinitions(baseDir);
 
 // 2. Check FK references
 const fkRefs = extractFKReferences(baseDir);
@@ -161,7 +199,7 @@ for (const ref of fkRefs) {
       rule: 'missing-entity',
       file: ref.file,
       field: ref.field,
-      message: `FK references entity "${ref.referencedEntity}" but no entity-${ref.referencedEntity}.md found`,
+      message: `FK references entity "${ref.referencedEntity}" but no corresponding entity file found`,
     });
   }
 }
@@ -205,7 +243,6 @@ if (issues.length > 0) {
   if (strict) {
     console.log(`  - ${definedEntities.size} entities defined`);
     console.log(`  - ${definedViews.size} views defined`);
-    console.log(`  - ${definedLogics.size} logics defined`);
     console.log(`  - ${fkRefs.length} FK references validated`);
   }
   process.exit(0);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-naslnames.mjs - Validate entity/view/logic names against NASL reserved words
+ * check-naslnames.mjs - Validate entity/view names against NASL reserved words
  *
  * Usage:
  *   node check-naslnames.mjs <name-or-file> [name-or-file] ...
@@ -126,7 +126,7 @@ const ENTITY_NAME_KEYWORDS = [
   'refresh','reset','resetlogs','resize','restricted','returning','reuse','reverse',
   'roles','row','rowid','rownum','rows','sample','savepoint','sb4','scan_instances',
   'scn','scope','sd_all','sd_inhibit','sd_show','segment','seg_block','seg_file',
-  'sequence','serializable','session','session_cached_cursors','sessions_per_user',
+  'sequence','serializable','session','session_cached_openursors','sessions_per_user',
   'share','shared','shared_pool','shrink','skip','skip_unusable_indexes','snapshot',
   'specification','split','sql_trace','standby','start','statement_id','stop',
   'storage','store','successful','sys_op_enforce_not_null$','sys_op_ntcimg$',
@@ -198,11 +198,17 @@ function extractNamesFromFile(filePath) {
     names.push(m[1]);
   }
 
-  // Extract entity/view/logic names from filenames like entity-Customer.md
+  // Extract entity/view names from Chinese+English hybrid filenames like 权限中心-实体-用户（LcapUser）.md
   const baseName = path.basename(filePath);
-  const nameMatch = baseName.match(/^(entity|view|logic|enum)-([^.]+)\.md$/);
-  if (nameMatch) {
-    names.push(nameMatch[2]);
+  const chineseNameMatch = baseName.match(/[（(]([A-Za-z][A-Za-z0-9_]*)[）)]\.md$/);
+  if (chineseNameMatch) {
+    names.push(chineseNameMatch[1]);
+  }
+
+  // Also support legacy kebab-case filenames like entity-Customer.md
+  const legacyNameMatch = baseName.match(/^(entity|view|logic|enum)-([^.]+)\.md$/);
+  if (legacyNameMatch) {
+    names.push(legacyNameMatch[2]);
   }
 
   // Extract names from table cells (first column often has entity/field names)
@@ -239,7 +245,7 @@ if (inputs.length === 0) {
   console.log('Examples:');
   console.log('  node check-naslnames.mjs Order');
   console.log('  node check-naslnames.mjs --type viewName Report');
-  console.log('  node check-naslnames.mjs plan/data-model/entity-Order.md');
+  console.log('  node check-naslnames.mjs plan/data-model/客户管理-实体-客户（Customer）.md');
   process.exit(0);
 }
 

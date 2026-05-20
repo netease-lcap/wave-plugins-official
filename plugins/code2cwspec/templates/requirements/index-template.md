@@ -1,4 +1,4 @@
-# 规范需求 - 大纲：[FEATURE]
+# 规范需求大纲
 
 - **生成时间**：[DATE]
 
@@ -12,8 +12,9 @@
 
 ## 关联文档
 
-- **[规范需求-术语表（[规范需求目录]/standard/terms.md）的路径]**
-- **[规范需求-功能协作（[规范需求目录]/standard/cooperations.md）的路径]**
+- **[规范需求-术语表（requirements/standard/术语表.md）的路径]**
+- **[规范需求-功能协作（requirements/standard/功能协作.md）的路径]**
+- **[规范需求-关键业务流程（requirements/standard/关键业务流程.md）的路径]**
 
 ## 功能模块
 
@@ -23,4 +24,4 @@
 
 [详细描述 一级功能 的业务功能]
 
-- **关联文档**：[一级功能（[规范需求目录]/standard/module-[一级功能中文名称].md）的路径]
+- **关联文档**：[[一级功能中文名称]（requirements/standard/[一级功能中文名称].md）的路径]

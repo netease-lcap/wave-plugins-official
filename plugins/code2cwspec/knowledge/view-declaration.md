@@ -45,8 +45,9 @@
 $View({
     title: "学生管理",
     crumb: "学生管理",
-    auth: false,
-    isIndex: false,
+    auth: true,
+    authDescription: "学生管理",
+    isIndex: true,
 })
 export declare function student({
   param1,
@@ -58,6 +59,7 @@ export declare function student({
 
 格式规则：
 - **参数展开解构格式**：值解构侧（`{ param1, }`）只列出参数名；注释写在类型签名侧（`}: {` 块内），每个参数前加 `/** 描述 */`
+- **无输入参数**：当页面无参数时，在函数签名后添加 `无输入参数。`
 
 解释一下：
 - 页面声明为一个函数，不需要返回类型（void 都不用写）。
@@ -67,19 +69,33 @@ export declare function student({
 - 禁止使用 union 类型
 - 禁止使用 `a: String | null`，推荐使用 `a?: String`
 
-关于依赖：
-- 一个页面中，数据查询都需要引用一个服务端逻辑，包括表格的数据查询、选择框的数据查询等，如 app.logics.loadStudentForTable.ts
-- 单实体的 create, update, delete, batchCreate, batchUpdate, batchDelete 不需要引用服务端逻辑，依赖实体本身就行，如 app.dataSources.defaultDS.entities.StudentEntity.create(input) 依赖 app.dataSources.defaultDS.entities.Student.ts 就行（在文档中不用写）
-- 复杂的 create, update, delete, batchCreate, batchUpdate, batchDelete 操作需要引用一个服务端逻辑，如 app.logics.createSchoolAndStudents.ts
-- 最后可以思考一些可能需要补充的服务端逻辑，比如复用场景等，如 app.logics.getCurrentStudentInfo.ts
+### $View() 装饰器选项
 
-下面是针对逻辑 signature 的补充说明：
-- 如果逻辑的主要功能是分页查询，输出参数类型定义必须为 `{ list: List<{...}>, total: Integer }`。
-- 逻辑是一个同步方法，接收指定结构的业务参数，返回业务指定数据结构，不要考虑逻辑报错异常返回的情况；
-- 返回类型中无需表示异常信息，逻辑体内会自动捕获，提示给用户；尽量少写 success, errorMessage 等字段，除非必要。
-- 禁止生成任何逻辑内部的实际业务代码。
-- 入参和返回类型尽量复用已存在的实体或数据结构，不要重复定义。
-- 逻辑的入参和返回尽量用多参数，其次用匿名数据结构。具名的数据结构除非已存在或者容易复用，否则不要使用。但匿名数据结构的层级不要太深，尽量不要超过3层。
+- **title**（必填）：页面标题
+- **crumb**：面包屑文字
+- **auth**：是否需要权限控制。登录页设为 `false`，CRUD 管理页设为 `true`
+- **authDescription**：权限描述。当 `auth: true` 时必须填写
+- **isIndex**：是否为默认子页面。CRUD 管理页通常设为 `true`，登录页设为 `false`
+
+典型签名：
+- 登录页：`$View({ title: "登录页", auth: false, isIndex: false })`
+- CRUD 管理页：`$View({ title: "用户管理", crumb: "用户管理", auth: true, authDescription: "用户管理", isIndex: true })`
+- 普通页面：`$View({ title: "客户列表", crumb: "客户列表" })`
+
+### 依赖的枚举、实体
+
+页面必须列出依赖的枚举和实体：
+- **数据建模-枚举-[依赖枚举中文名称]**：[数据建模-枚举-[依赖枚举中文名称]（plan/data-model/数据建模-枚举.md）的路径]
+- **数据建模-实体-[依赖实体中文名称]**：[数据建模-实体-[依赖实体中文名称]（plan/data-model/[子域]-实体-[依赖实体中文名称]（[依赖实体英文名称]）.md）的路径]
+
+### 特殊组件
+
+仅限二维码、地图、pdf 预览、视频播放器、富文本编辑器等非标准 UI。无特殊组件时使用：
+```
+<!-- normalized -->
+
+- 无特殊组件
+```
 
 ## 真实示例
 
@@ -94,20 +110,14 @@ export declare function student({
 
 plan/
 ├── data-model/
-│   ├── index.md
-│   ├── enums.md
-│   ├── entity-Product.md
-│   ├── entity-OrderForm.md
-│   ├── entity-OrderProductItem.md
-├── backend/
-│   ├── index.md
-│   ├── logic-loadOrderFormList.md
+│   ├── 数据建模设计.md
+│   ├── 数据建模-枚举.md
+│   ├── 商品管理-实体-商品（Product）.md
+│   ├── 订单管理-实体-订单（OrderForm）.md
+│   ├── 订单管理-实体-订单商品项（OrderProductItem）.md
 ├── frontend/
-│   ├── view-OrderForm.md
-src/
-├── app.dataSources.defaultDS.entities.Product.ts
-├── app.dataSources.defaultDS.entities.OrderForm.ts
-├── app.enums.OrderStatus.ts
+│   ├── 业务模块设计.md
+│   ├── 订单管理-商品订单列表页（orderForm）.md
 
 ### 输出
 
@@ -121,10 +131,22 @@ src/
 $View({
     title: "商品订单列表页",
     crumb: "商品订单列表页",
-    auth: false,
-    isIndex: false,
+    auth: true,
+    authDescription: "商品订单列表页",
+    isIndex: true,
 })
 export declare function orderForm();
 ```
 
 无输入参数。
+
+### 依赖的枚举、实体
+
+- **数据建模-枚举-订单状态**：plan/data-model/数据建模-枚举.md
+- **数据建模-实体-订单**：plan/data-model/订单管理-实体-订单（OrderForm）.md
+- **数据建模-实体-商品**：plan/data-model/商品管理-实体-商品（Product）.md
+
+### 特殊组件
+<!-- normalized -->
+
+- 无特殊组件
