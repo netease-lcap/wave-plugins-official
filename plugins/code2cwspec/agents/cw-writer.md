@@ -45,20 +45,19 @@ cw-writer 有两种工作模式：
 
 | 当前写的文档类型 | 加载对应知识库 |
 |---|---|
-| 实体（entity-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/entity-declaration.md` |
-| 枚举（enums.md） | `${WAVE_PLUGIN_ROOT}/knowledge/enum-declaration.md` |
+| 实体（[子域]-实体-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/entity-declaration.md` |
+| 枚举（数据建模-枚举.md） | `${WAVE_PLUGIN_ROOT}/knowledge/enum-declaration.md` |
 | 数据结构（structures.md） | `${WAVE_PLUGIN_ROOT}/knowledge/structure-declaration.md` |
-| 逻辑（logic-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/logic-declaration.md` |
-| 页面（view-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/view-declaration.md` |
+| 页面（[一级功能]-*.md） | `${WAVE_PLUGIN_ROOT}/knowledge/view-declaration.md` |
 
-案例参考：只读 1-2 个同类案例，不要全部加载。如写 `entity-Customer.md` 时只读 `warehouse/plan/data-model/entity-*.md` 中的一个。
+案例参考：只读 1-2 个同类案例，不要全部加载。如写 `客户管理-实体-客户（Customer）.md` 时只读 `warehouse/plan/data-model/权限中心-实体-*.md` 中的一个。
 
 ## 文档生成规则
 
 ### 每个文档生成时：
 
 1. **加载对应模板**：从 `${WAVE_PLUGIN_ROOT}/templates/` 加载匹配的 `-template.md` 文件
-2. **参考案例**：从 `${WAVE_PLUGIN_ROOT}/warehouse/` 中找到对应类型的案例（如写 entity-*.md 参考 `warehouse/plan/data-model/entity-*.md`）
+2. **参考案例**：从 `${WAVE_PLUGIN_ROOT}/warehouse/` 中找到对应类型的案例（如写实体参考 `warehouse/plan/data-model/权限中心-实体-*.md`）
 3. **填充占位符**：用研究报告中的实际数据和架构规划中的设计填充所有占位符
 4. **遵守模板规则**：每个模板内部的注释都是硬性规则，必须遵守
 5. **保持格式**：维持模板的标题层级、列表格式、注释块
@@ -73,14 +72,12 @@ cw-writer 有两种工作模式：
 ### naturalts 代码块规则
 
 以下文档包含 naturalts 代码块：
-- **实体类型定义**（entity-*.md）：实体类定义、属性、注解
-- **页面签名**（view-*.md）：`$View({...})` 装饰器和函数签名
-- **逻辑签名**（logic-*.md）：`export declare function` 签名
+- **实体类型定义**（[子域]-实体-*.md）：实体类定义、属性、注解
+- **页面签名**（[一级功能]-*.md）：`$View({...})` 装饰器和函数签名
 
 规则：
 - 实体英文名称使用 **PascalCase**，属性名使用 **camelCase**
 - 页面英文名称使用 **camelCase**
-- 逻辑英文名称使用 **camelCase**
 - 类型可使用已生成的实体、枚举、数据结构
 
 ### LCAP 内置实体引用
@@ -110,7 +107,7 @@ userId: String;
 
 ### 枚举统一管理
 
-所有枚举统一维护在 `plan/data-model/enums.md` 中。禁止生成、引用或依赖任何独立的枚举详情文件（如 `enum-*.md`）。
+所有枚举统一维护在 `plan/data-model/数据建模-枚举.md` 中。禁止生成、引用或依赖任何独立的枚举详情文件（如 `enum-*.md`）。
 
 ## 批次执行
 
@@ -118,41 +115,34 @@ userId: String;
 
 ### Phase A — requirements/
 
-1. `standard/terms.md`
+1. `standard/术语表.md`
 2. `standard/business.md`
 3. `standard/cooperations.md`
-4. `standard/module-[模块英文名].md`（每个业务模块一个独立文件，多个模块可并行）
-5. `persistent/menus.md`、`point.md`、`precheck.md`、`checklist.md`
+4. `standard/[模块中文名].md`（每个业务模块一个独立文件，多个模块可并行）
+5. `persistent/功能模块目录.md`、`point.md`、`precheck.md`、`checklist.md`
 
 ### Phase B — plan/
 
 1. `application-structure/` 下所有文件
-2. `data-model/enums.md`、`entities.md`
-3. `data-model/entity-*.md`（多个实体可并行）
-4. `data-model/er-diagram.md`
-5. `ui-design.md`
-6. `frontend/index.md`、`routes.md`
-7. `frontend/view-*.md`（多个页面可并行）
-8. `backend/index.md`
-9. `backend/logic-[函数英文名].md`（每个后端逻辑函数一个独立文件，一函数一文，多个可并行）
-10. `integration/`、`dependencies/`
-11. `plan/index.md`
-
-### Phase C — tasks/
-
-1. `entities.md`、`enums.md`、`structures.md`
-2. `frontend-views.md`、`backend-logics.md`
-3. `index.md`
+2. `data-model/数据建模-枚举.md`、`entities.md`
+3. `data-model/[子域]-实体-[中文名]（英文名）.md`（多个实体可并行）
+4. `data-model/数据建模-实体关系总览图.md`
+5. `UI_UE 规范.md`
+6. `frontend/业务模块设计.md`、`业务模块-层级路由.md`
+7. `frontend/[一级功能]-[中文名]（英文名）.md`（多个页面可并行）
+8. `integration/`、`dependencies/`
+9. `技术设计大纲.md`
 
 ## 文档命名规范
 
-**文件路径统一使用 kebab-case**（与 generation-manifest.json 保持一致）：
-- **实体文档**: `entity-[kebab-case英文名].md`，如 `entity-customer.md`
-- **视图文档**: `view-[kebab-case英文名].md`，如 `view-customer-list.md`
-- **逻辑文档**: `logic-[kebab-case英文名].md`，如 `logic-calculate-discount.md`
-- **文件名 = 英文名（kebab-case），禁止中文文件名**
+**文件路径使用中文+英文混合命名**（参照 `${WAVE_PLUGIN_ROOT}/knowledge/naming-convention.md`）：
+- **实体文档**: `[子域]-实体-[中文名]（英文名）.md`，如 `客户管理-实体-客户（Customer）.md`
+- **视图文档**: `[一级功能]-[中文名]（英文名）.md`，如 `客户管理-客户列表（customerList）.md`
+- **模块需求**: `[模块中文名].md`，如 `客户管理.md`
+- **索引文件**: 使用描述性中文名，如 `技术设计大纲.md`、`应用架构设计.md`、`数据建模设计.md`、`业务模块设计.md`
+- **禁止使用 kebab-case 英文文件名**
 
-注意：文件路径使用 kebab-case，但 naturalts 代码块内部的标识符仍使用 camelCase/PascalCase（如 `export class Customer { ... }`，`$View({...})` 中的函数名用 camelCase）。
+注意：文件路径使用中文+英文混合命名，但 naturalts 代码块内部的标识符仍使用 camelCase/PascalCase（如 `export class Customer { ... }`，`$View({...})` 中的函数名用 camelCase）。
 
 ## 实体声明规范
 
@@ -177,25 +167,18 @@ userId: String;
 
 1. **NASL 路径标记**: 每个枚举必须包含 `naturalts path="app.enums.EnumName"`
 2. **枚举值**: 必须列出完整的枚举值列表（值、中文描述、使用场景）
-3. **统一维护**: 所有枚举统一在 `plan/data-model/enums.md`，禁止独立文件
-
-## 服务端逻辑声明规范
-
-1. **NASL 路径标记**: 必须包含 `naturalts path="app.logics.LogicName"`
-2. **函数声明**: 必须生成 `export declare function LogicName(params) { ... }`
-3. **输入参数类型**: 必须使用枚举而非 String
-4. **被前端调用列表**: 必须列出调用此逻辑的页面
-5. **依赖声明**: 必须列出依赖的实体和枚举
+3. **统一维护**: 所有枚举统一在 `plan/data-model/数据建模-枚举.md`，禁止独立文件
 
 ## 视图声明规范
 
 1. **页面签名**: 必须包含 `$View({...})` 装饰器和正确的函数签名
 2. **一级功能分类**: 权限中心相关页面使用特定分类，通用业务页面使用另一分类
-3. **页面参数**: 必须包含验收列表参数、交互操作参数、业务流程参数
+3. **页面参数**: 必须包含验收列表参数、业务流程参数
 4. **ID 标识**: 必须使用 Integer 类型而非 String
-5. **交互操作**: 必须列出所有增删改查按钮、搜索框、筛选器、导出等操作
-6. **依赖的服务端逻辑**: 必须列出调用的逻辑，且每个引用必须有对应的 logic-*.md 文档存在
-7. **特殊组件**: 仅限二维码、地图、pdf 预览、视频播放器、富文本编辑器等非标准 UI
+5. **无输入参数**: 当页面无参数时，必须在函数签名后添加 `无输入参数。`
+6. **依赖的枚举、实体**: 必须列出页面依赖的枚举和实体，路径指向 `plan/data-model/数据建模-枚举.md` 和 `plan/data-model/[子域]-实体-[中文名]（英文名）.md`
+7. **特殊组件**: 仅限二维码、地图、pdf 预览、视频播放器、富文本编辑器等非标准 UI；无特殊组件时使用 `<!-- normalized -->` + `- 无特殊组件` 格式
+8. **auth/isIndex**: 权限中心 CRUD 页面必须包含 `auth: true, authDescription: "xxx", isIndex: true`；登录页必须包含 `auth: false, isIndex: false`
 
 ## 菜单规范（对应 check-menus.mjs）
 
@@ -206,7 +189,7 @@ userId: String;
 
 ## 路径引用规范（对应 check-placeholders.mjs）
 
-1. **完整路径**: 所有关联文档引用必须使用完整路径（如 `plan/frontend/view-login.md`）
+1. **完整路径**: 所有关联文档引用必须使用完整路径（如 `plan/frontend/权限中心-登录页（login）.md`）
 2. **禁止短路径**: 不能使用 `view-login.md` 等短路径
 3. **行号格式**: 必须使用 `[L10,20]` 格式（包含起始和结束行号），禁止 `[L10]` 简写
 
@@ -219,18 +202,18 @@ userId: String;
 ## ER 图规范
 
 1. **完整性**: 所有实体必须反映到 ER 图中
-2. **关系目标**: ER 图中的关系目标实体必须存在对应的 entity-*.md 文件
+2. **关系目标**: ER 图中的关系目标实体必须存在对应的实体文件
 3. **核心领域**: 实体必须归属到正确的核心子域
 
 ## 交叉引用验证（对应 check-crossrefs.mjs）
 
-1. **前端→后端**: view-*.md 中引用的每个逻辑标识，必须存在对应的 plan/backend/logic-*.md 文件
-2. **后端→前端**: logic-*.md 中列出的"被前端调用"页面，必须存在对应的 plan/frontend/view-*.md 文件
-3. **实体→枚举**: entity-*.md 中引用的每个枚举，必须在 plan/data-model/enums.md 中定义
+1. **实体→枚举**: 实体文件中引用的每个枚举，必须在 `plan/data-model/数据建模-枚举.md` 中定义
+2. **视图→实体/枚举**: 视图文件中引用的实体和枚举必须存在对应文件
+3. **Markdown 链接**: 所有 Markdown 链接指向的文件必须存在
 
 ## 命名冲突检查（对应 check-naslnames.mjs）
 
-生成的实体名、枚举名、属性名、页面名、逻辑名不得与以下关键词冲突：
+生成的实体名、枚举名、属性名、页面名不得与以下关键词冲突：
 - JavaScript/TypeScript 保留字（如 `class`, `function`, `import`, `export` 等）
 - NASL 关键字（如 `$View`, `$Entity`, `@EntityRelation` 等）
 - SQL 保留字（如 `SELECT`, `INSERT`, `TABLE`, `INDEX` 等）

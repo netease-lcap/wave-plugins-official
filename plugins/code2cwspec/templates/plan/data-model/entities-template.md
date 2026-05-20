@@ -20,14 +20,14 @@
 【其他要求】
 - 禁止遗漏 应用架构-核心领域划分 文档中每个子域的任何核心实体
 - 实体之间可能存在依赖关系，根据依赖关系对实体进行排序生成
-- 实体属性必须使用已经生成的实体和枚举。⚠️ 严禁用 string、int、float 等基础类型替代枚举——如果 数据建模-枚举（[项目设计目录对应路径]/data-model/enums.md） 文件中已定义了某个枚举，该属性的类型必须是该枚举名称而不是 string 或数字。检查清单：(1) 扫描所有属性，对标数据建模-枚举文件；(2) 如果属性值是有限、离散、固定的业务值，必须使用对应的枚举类型；(3) 禁止用 string 或数字直接表示应该用枚举的属性（如状态、类型、分类等）；(4) 确保属性类型与枚举文件完全一致。
+- 实体属性必须使用已经生成的实体和枚举。⚠️ 严禁用 string、int、float 等基础类型替代枚举——如果 数据建模-枚举（plan/data-model/数据建模-枚举.md） 文件中已定义了某个枚举，该属性的类型必须是该枚举名称而不是 string 或数字。检查清单：(1) 扫描所有属性，对标数据建模-枚举文件；(2) 如果属性值是有限、离散、固定的业务值，必须使用对应的枚举类型；(3) 禁止用 string 或数字直接表示应该用枚举的属性（如状态、类型、分类等）；(4) 确保属性类型与枚举文件完全一致。
 - 实体英文名称严格使用 PascalCase 格式 -->
 
 ## [实体中文名称]（[实体英文名称]）
 
 [详细描述当前实体的业务功能，150 字以内，不包含代码示例]
 
-- **关联文档**：[数据建模-实体-[实体中文名称]（plan/data-model/entity-[实体英文名称].md）的路径]
+- **关联文档**：[数据建模-实体-[实体中文名称]（plan/data-model/[子域]-实体-[实体中文名称]（[实体英文名称]）.md）的路径]
 
 <!-- 必须根据数据建模-实体关系总览图，每个实体映射关系都必须生成专门的中间实体（Junction Table）都必须生成对应的中间实体（Junction Table），禁止遗漏任何映射关系的中间实体（Junction Table）。 -->
 
@@ -35,7 +35,7 @@
 
 [详细描述当前中间实体的业务功能，150 字以内，不包含代码示例]
 
-- **关联文档**：[数据建模-实体-[中间实体中文名称]（plan/data-model/entity-[中间实体英文名称].md）的路径]
+- **关联文档**：[数据建模-实体-[中间实体中文名称]（plan/data-model/[子域]-实体-[中间实体中文名称]（[中间实体英文名称]）.md）的路径]
 
 <!-- 以下为权限中心（PermissionCenter）相关实体，属于内置的通用权限功能模块，禁止修改。当需求或应用架构涉及 登录/认证/用户管理/角色管理/权限管理/部门管理 时，须将本段所列全部实体纳入数据建模与任务规划，不得遗漏；内容以插件根目录 warehouse/plan/data-model 中的官方示例为准。 -->
 
@@ -43,52 +43,52 @@
 
 制品应用的用户，实体名称不允许改动，默认生成的字段不允许改动，可新增自定义字段。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapUser.md
+- **关联文档**：plan/data-model/权限中心-实体-用户（LcapUser）.md
 
 ## 角色（LcapRole）
 
 角色，操作该表可完成角色管理。默认生成的字段不允许改动，可新增自定义字段。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapRole.md
+- **关联文档**：plan/data-model/权限中心-实体-角色（LcapRole）.md
 
 ## 权限（LcapPermission）
 
 权限，操作该表可完成权限管理。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapPermission.md
+- **关联文档**：plan/data-model/权限中心-实体-权限（LcapPermission）.md
 
 ## 资源（LcapResource）
 
 资源，操作该表可完成资源管理。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapResource.md
+- **关联文档**：plan/data-model/权限中心-实体-资源（LcapResource）.md
 
 ## 部门（LcapDepartment）
 
 部门，新增部门的同时一般需要指定上一级部门。默认生成的字段不允许改动，可新增自定义字段。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapDepartment.md
+- **关联文档**：plan/data-model/权限中心-实体-部门（LcapDepartment）.md
 
 ## 用户与角色映射（LcapUserRoleMapping）
 
 用户与角色关联，操作该表可完成为角色添加成员、移除角色成员等。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapUserRoleMapping.md
+- **关联文档**：plan/data-model/权限中心-实体-用户与角色映射（LcapUserRoleMapping）.md
 
 ## 角色与权限映射（LcapRolePerMapping）
 
 角色与权限关联实体，操作该表可完成为角色分配权限、移除权限等。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapRolePerMapping.md
+- **关联文档**：plan/data-model/权限中心-实体-角色与权限映射（LcapRolePerMapping）.md
 
 ## 权限与资源映射（LcapPerResMapping）
 
 权限与资源关联实体，操作该表可完成为权限分配资源等。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapPerResMapping.md
+- **关联文档**：plan/data-model/权限中心-实体-权限与资源映射（LcapPerResMapping）.md
 
 ## 用户与部门映射（LcapUserDeptMapping）
 
 用户与部门关联实体，操作该表可完成用户部门分配等。
 
-- **关联文档**：[项目设计目录对应路径]/data-model/entity-LcapUserDeptMapping.md
+- **关联文档**：plan/data-model/权限中心-实体-用户与部门映射（LcapUserDeptMapping）.md

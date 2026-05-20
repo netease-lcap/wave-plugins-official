@@ -16,10 +16,9 @@ const jsonMode = process.argv.includes("--json");
 const OUTPUT_DIR = "cwspec";
 const REQUIREMENTS_DIR = "cwspec/requirements";
 const PLAN_DIR = "cwspec/plan";
-const TASKS_DIR = "cwspec/tasks";
 
 // Create directories
-for (const dir of [OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR, TASKS_DIR]) {
+for (const dir of [OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR]) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -27,7 +26,7 @@ for (const dir of [OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR, TASKS_DIR]) {
 
 // --- Output ---
 if (jsonMode) {
-  console.log(JSON.stringify({ OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR, TASKS_DIR }));
+  console.log(JSON.stringify({ OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR }));
 } else {
   console.log(`Output: ${OUTPUT_DIR}`);
 }

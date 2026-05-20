@@ -19,14 +19,12 @@ const PLACEHOLDER_PATTERNS = [
   /TODO/g,
 ];
 
-// 短路径模式：匹配不带斜杠的 .md 引用（排除代码块内）
+// 短路径模式：匹配不带路径前缀的 kebab-case .md 引用（排除代码块内）
+// 支持: view-xxx.md, logic-xxx.md, entity-xxx.md, enum-xxx.md
 const SHORT_PATH_PATTERN = /(?<!```[\s\S]*?)(?<!\([^)]*?)(?:^|[\s(])(view-|logic-|entity-|enum-)[a-zA-Z0-9_-]+\.md(?!.*?\))/gm;
 
 // 行号简写模式：[L10] 而非 [L10,20]
 const LINE_SHORTHAND_PATTERN = /\[L(\d+)\](?!,)/g;
-
-// 完整路径模式：必须包含 plan/ 或 inputs/ 前缀
-const INCOMPLETE_PATH_PATTERN = /(?<!plan\/|inputs\/)(?<!\()([a-zA-Z0-9_-]+\.md)(?!\))/g;
 
 function findMarkdownFiles(dir) {
   const files = [];
@@ -86,6 +84,12 @@ function checkLineFormats(filePath, content) {
   return issues;
 }
 
+/** Check if a .md reference path is a valid Chinese-named path like plan/data-model/权限中心-实体-用户（LcapUser）.md */
+function isChineseNamedPath(ref) {
+  // Chinese filename pattern: contains Chinese characters and full-width parentheses
+  return /[\u4e00-\u9fa5]/.test(ref) && /[（(][^）)]+[）)]/.test(ref);
+}
+
 function checkPaths(filePath, content) {
   const issues = [];
   
@@ -101,13 +105,13 @@ function checkPaths(filePath, content) {
     
     if (inCodeBlock) return;
     
-    // 检查短路径引用
+    // 检查短路径引用 (kebab-case: view-xxx.md, logic-xxx.md, entity-xxx.md, enum-xxx.md)
     if (/(?:^|[\s(])(view-|logic-|entity-|enum-)[a-zA-Z0-9_-]+\.md/.test(line)) {
       issues.push({
         file: filePath,
         line: idx + 1,
         type: 'short-path',
-        message: `短路径引用: 请使用完整路径 (如 "plan/frontend/view-login.md")`,
+        message: `短路径引用: 请使用完整路径 (如 "plan/frontend/权限中心-登录页（login）.md")`,
       });
     }
     
@@ -115,17 +119,20 @@ function checkPaths(filePath, content) {
     if (!line.includes('http')) {
       // 1. 提取 Markdown 链接 URL 部分 (xxx.md) → 这些是有效链接，跳过
       const linkUrls = new Set();
-      for (const m of line.matchAll(/\(([a-zA-Z0-9_./-]+\.md(?:#[a-zA-Z0-9_-]+)?)\)/g)) {
+      for (const m of line.matchAll(/\(([^)]+\.md(?:#[a-zA-Z0-9_-]+)?)\)/g)) {
         linkUrls.add(m[1]);
       }
 
       // 2. 提取行内所有 .md 路径引用（包括链接文本中的和纯文本中的）
-      for (const m of line.matchAll(/([a-zA-Z][a-zA-Z0-9_./-]*\.md)/g)) {
+      // Support Chinese characters in paths
+      for (const m of line.matchAll(/([a-zA-Z\u4e00-\u9fa5_./\-（）\(\)][a-zA-Z0-9\u4e00-\u9fa5_./\-（）\(\)]*\.md)/g)) {
         const ref = m[1];
         // 已在链接 URL 中的跳过
         if (linkUrls.has(ref)) continue;
-        // 以 plan/ 或 inputs/ 开头的有效路径跳过
-        if (ref.startsWith('plan/') || ref.startsWith('inputs/')) continue;
+        // 以 plan/ 或 inputs/ 或 requirements/ 开头的有效路径跳过
+        if (ref.startsWith('plan/') || ref.startsWith('inputs/') || ref.startsWith('requirements/')) continue;
+        // Chinese-named paths with full directory prefix are valid
+        if (isChineseNamedPath(ref)) continue;
         // 其余孤立 .md 引用报不完整
         issues.push({
           file: filePath,

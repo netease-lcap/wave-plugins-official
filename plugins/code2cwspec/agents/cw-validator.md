@@ -20,13 +20,8 @@ description: 对已生成的 Codewave 规范文档执行 LCAP 合规检查和交
 - 权限相关属性 → 必须使用 `LcapPermission` FK
 - 禁止创建 User、Employee、Staff、Role、Permission、Department 等自定义实体
 
-### 服务逻辑过滤
-- 简单 CRUD（getDetail/create/update/delete/batchCreate/batchUpdate/batchDelete）→ 不应生成独立逻辑
-- 枚举查询/加载 → 不应生成独立逻辑
-- 仅复杂业务逻辑、多实体操作、含业务规则的接口才应有独立逻辑文档
-
 ### 枚举统一管理
-- 所有枚举必须统一维护在 `plan/data-model/enums.md` 中
+- 所有枚举必须统一维护在 `plan/data-model/数据建模-枚举.md` 中
 - 禁止存在独立的 enum-*.md 文件
 
 ### 占位符清理
@@ -34,15 +29,14 @@ description: 对已生成的 Codewave 规范文档执行 LCAP 合规检查和交
 
 ## 交叉引用验证
 
-1. **plan/index.md 一致性**：索引中的条目与详情文档一一对应
-2. **view ↔ logic 互引用**：view 引用的 logic 存在，logic 引用的 view 存在
-3. **entity 依赖**：entity 引用的枚举和依赖实体存在
-4. **tasks 与 plan 对应**：tasks 条目与 plan 条目一一对应
-5. **路径引用格式**：无残留占位符、行号格式正确（`[L10,20]` 格式），路径可为相对短路径
+1. **plan/技术设计大纲.md 一致性**：索引中的条目与详情文档一一对应
+2. **entity 依赖**：entity 引用的枚举和依赖实体存在
+3. **路径引用格式**：无残留占位符、行号格式正确（`[L10,20]` 格式），路径可为相对短路径
+4. **中文命名一致性**：文件路径使用中文+英文混合命名，无残留 kebab-case 英文路径
 
 ## 命名冲突检查
 
-使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面/逻辑名称不与以下冲突：
+使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面名称不与以下冲突：
 - JavaScript/TypeScript 保留字
 - NASL 关键字
 - SQL 保留字

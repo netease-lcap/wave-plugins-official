@@ -1,4 +1,4 @@
-# 业务模块
+# 业务模块设计
 
 - **生成时间**：[DATE]
 
@@ -7,7 +7,7 @@
 
 ## 层级路由
 
-- **关联文档**：[业务模块-层级路由（plan/frontend/routes.md）的路径]
+- **关联文档**：[业务模块-层级路由（plan/frontend/业务模块-层级路由.md）的路径]
 
 ## 功能页面
 
@@ -17,35 +17,34 @@
 
 [简单描述功能页面的功能，不包含特殊组件]
 
-- **关联文档**：[业务模块-[功能页面中文名称]（plan/frontend/view-[功能页面英文名称].md）的路径]
+- **关联文档**：[[一级功能]-[功能页面中文名称]（[功能页面英文名称]）（plan/frontend/[一级功能]-[功能页面中文名称]（[功能页面英文名称]）.md）的路径]
 
 <!-- 以下为权限中心（PermissionCenter）相关功能页面，属于内置的通用权限功能模块，禁止修改。 -->
 
 ### 登录页（login）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-login.md
+- **关联文档**：plan/frontend/权限中心-登录页（login）.md
 
 ### 无权限页（noAuth）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-noAuth.md
+- **关联文档**：plan/frontend/权限中心-无权限页（noAuth）.md
 
 ### 权限中心（permissionCenter）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-permissionCenter.md
+- **关联文档**：plan/frontend/权限中心-权限中心（permissionCenter）.md
 
 ### 用户管理页（userManagement）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-userManagement.md
+- **关联文档**：plan/frontend/权限中心-用户管理页（userManagement）.md
 
 ### 角色管理页（roleManagement）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-roleManagement.md
+- **关联文档**：plan/frontend/权限中心-角色管理页（roleManagement）.md
 
 ### 权限管理页（permissionManagement）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-permissionManagement.md
+- **关联文档**：plan/frontend/权限中心-权限管理页（permissionManagement）.md
 
 ### 部门管理页（departmentManagement）
 
-- **关联文档**：[项目设计目录对应路径]/frontend/view-departmentManagement.md
-
+- **关联文档**：plan/frontend/权限中心-部门管理页（departmentManagement）.md

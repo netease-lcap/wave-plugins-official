@@ -1,6 +1,6 @@
 ---
 name: code2cwspec
-description: 全量分析现有代码仓库，逆向生成为 Codewave (LCAP) 规范模板，一次性输出 requirements/plan/tasks 全部文档。
+description: 全量分析现有代码仓库，逆向生成为 Codewave (LCAP) 规范模板，一次性输出 requirements/plan 全部文档。
 disable-model-invocation: true
 allowed-tools:
   - Bash(node */init-cwspec.mjs*)
@@ -13,7 +13,7 @@ allowed-tools:
 
 # Code2CwSpec: 全量代码转 Codewave 规范
 
-你是一名技术文档架构师。为该仓库生成完整的 Codewave 规范文档，包含 requirements（需求规范）、plan（项目设计）、tasks（开发任务）三阶段产物。
+你是一名技术文档架构师。为该仓库生成完整的 Codewave 规范文档，包含 requirements（需求规范）、plan（项目设计）两阶段产物。
 
 ## 用户输入
 
@@ -37,7 +37,6 @@ $ARGUMENTS
 - `cwspec/generation-manifest.json` — 生成清单
 - `cwspec/requirements/` — 需求规范
 - `cwspec/plan/` — 项目设计
-- `cwspec/tasks/` — 开发任务
 - `cwspec/quality-report.md` — 质量报告
 
 **模板目录**：`${WAVE_PLUGIN_ROOT}/templates/`，子 agent 按需直接从插件目录读取。
@@ -78,9 +77,8 @@ $ARGUMENTS
 1. 划分核心领域/业务模块
 2. 设计数据模型（枚举、实体、ER 关系）
 3. 规划前端页面层级和路由
-4. 规划后端服务逻辑
-5. 识别特殊组件和外部集成
-6. 生成文档生成清单（JSON 格式，列出每个要生成的文件及其模板路径和输入数据）
+4. 识别特殊组件和外部集成
+5. 生成文档生成清单（JSON 格式，列出每个要生成的文件及其模板路径和输入数据）
 
 架构规划写入 `cwspec/architecture-plan.md` 和 `cwspec/generation-manifest.json`。
 
@@ -89,26 +87,20 @@ $ARGUMENTS
 委托 `cw-writer` agent，根据架构规划批量生成所有文档。按以下顺序：
 
 **Phase A — requirements/**（需求规范）
-- `standard/terms.md` — 术语表（权限角色 + 业务术语）
+- `standard/术语表.md` — 术语表（权限角色 + 业务术语）
 - `standard/business.md` — 整体业务
 - `standard/cooperations.md` — 功能协作
-- `standard/module-*.md` — 每个功能模块一个独立文件（如 module-customer-management.md、module-purchase-management.md）
+- `standard/[模块中文名].md` — 每个功能模块一个独立文件（如 客户管理.md、采购管理.md）
 - `persistent/` — 菜单、关联段落、预检查、检查清单
 
 **Phase B — plan/**（项目设计）
 - `application-structure/` — 应用架构（领域划分、服务集成、角色、视图）
 - `data-model/` — 数据建模（枚举、实体详情、ER 图）
-- `ui-design.md` — UI/UE 规范
+- `UI_UE 规范.md` — UI/UE 规范
 - `frontend/` — 前端业务模块（路由索引、页面详情）
-- `backend/` — 后端领域服务（服务索引、逻辑详情；**一函数一文**，每个后端逻辑函数独立文件）
 - `integration/` — 外部集成
 - `dependencies/` — 特殊组件
-- `index.md` — 项目设计总纲
-
-**Phase C — tasks/**（开发任务）
-- `entities.md`、`enums.md`、`structures.md`
-- `frontend-views.md`、`backend-logics.md`
-- `index.md` — 任务索引
+- `技术设计大纲.md` — 项目设计总纲
 
 ### 第 6 步：质量验证
 
@@ -125,6 +117,6 @@ $ARGUMENTS
 ### 第 8 步：报告完成情况
 
 输出：
-- 生成的目录结构概览（requirements: N 个, plan: N 个, tasks: N 个）
+- 生成的目录结构概览（requirements: N 个, plan: N 个）
 - 质量验证结果
 - 任何需要明确的问题（最多 3 个）
