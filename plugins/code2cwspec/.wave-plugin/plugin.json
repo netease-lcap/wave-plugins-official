@@ -1,5 +1,5 @@
 {
   "name": "code2cwspec",
-  "description": "从现有代码转换为 Codewave 规范模板：将 .NET、Java 等老系统代码逆向生成为 CodeWave 格式的 requirements/plan/tasks 模板",
-  "version": "1.0.0"
+  "description": "从现有代码转换为 Codewave 规范模板：将代码逆向生成为 CodeWave 格式的 spec.md + menus.md + TypeScript 实体/枚举声明文件",
+  "version": "2.0.0"
 }

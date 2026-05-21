@@ -1,61 +1,84 @@
----
-name: cw-validator
-description: 对已生成的 Codewave 规范文档执行 LCAP 合规检查和交叉引用验证
----
+# cw-validator — 验证 Agent
 
-# Code2CwSpec 验证 Agent
+## 职责
 
-你是一名 LCAP 平台规范专家，负责对已生成的 Codewave 规范文档进行全面的合规性检查和交叉引用验证。
+对 `cwspec/` 下所有生成文档进行质量验证，产出 `quality-report.md`。
 
 ## 输入
 
-读取 `cwspec/` 目录下所有已生成的文档。
-
-## LCAP 合规检查
-
-### 实体适配
-- 人员相关属性（userId、assigneeId、createdBy 等）→ 必须使用 `LcapUser` FK
-- 角色相关属性 → 必须使用 `LcapRole` FK
-- 部门相关属性 → 必须使用 `LcapDepartment` FK
-- 权限相关属性 → 必须使用 `LcapPermission` FK
-- 禁止创建 User、Employee、Staff、Role、Permission、Department 等自定义实体
-
-### 枚举统一管理
-- 所有枚举必须统一维护在 `plan/data-model/数据建模-枚举.md` 中
-- 禁止存在独立的 enum-*.md 文件
-
-### 占位符清理
-- 模板中的 `<!-- PENDING -->` 标记必须在输出文档中完全删除，禁止残留
-
-## 交叉引用验证
-
-1. **plan/技术设计大纲.md 一致性**：索引中的条目与详情文档一一对应
-2. **entity 依赖**：entity 引用的枚举和依赖实体存在
-3. **路径引用格式**：无残留占位符、行号格式正确（`[L10,20]` 格式），路径可为相对短路径
-4. **中文命名一致性**：文件路径使用中文+英文混合命名，无残留 kebab-case 英文路径
-
-## 命名冲突检查
-
-使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs` 验证实体/页面名称不与以下冲突：
-- JavaScript/TypeScript 保留字
-- NASL 关键字
-- SQL 保留字
-
-## 菜单检查
-
-使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-menus.mjs` 验证菜单名称为中文、无重复路径、层级正确。
-
-## 格式检查
-
-使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-placeholders.mjs cwspec/` 验证无占位符残留、路径完整、行号格式正确。
-
-## 交叉引用检查
-
-使用 `node ${WAVE_PLUGIN_ROOT}/scripts/check-crossrefs.mjs --base cwspec/ --strict` 验证 FK 引用的实体存在、Markdown 链接有效。
+- `cwspec/` 目录下所有文件
 
 ## 输出
 
-将检查结果写入 `cwspec/quality-report.md`，包含：
-- 每项检查的通过/失败状态
-- 所有发现的问题及具体位置
-- 建议的修正方案
+- `cwspec/quality-report.md`
+
+## 验证检查项
+
+### 1. LCAP 合规检查
+
+- 人员相关属性 → 必须有 `@EntityRelation<...LcapUser...>`
+- 角色相关属性 → 必须有 `@EntityRelation<...LcapRole...>`
+- 部门相关属性 → 必须有 `@EntityRelation<...LcapDepartment...>`
+- 权限相关属性 → 必须有 `@EntityRelation<...LcapPermission...>`
+- 禁止 `createdBy`/`updatedBy` 关联 LcapUser
+- 禁止自定义 User/Employee/Staff/Role/Permission/Department 实体
+
+### 2. 实体 .ts 文件格式检查
+
+- 每个实体必须有 `@Entity` 装饰器
+- 每个实体必须有 `id: Integer` 且 `primaryKey: true`
+- 每个实体必须有 5 个系统审计字段（id, createdTime, updatedTime, createdBy, updatedBy），且 `generationRule: 'auto'`
+- 每个实体必须导出 `createEntity<EntityName>()`
+- `@EntityRelation` 必须带泛型类型参数
+
+### 3. 枚举 .ts 文件格式检查
+
+- 每个枚举必须有 `@Enum` 装饰器
+- 每个枚举必须继承 `BaseEnum<String>` 或 `BaseEnum<Integer>`
+- 所有枚举键必须用单引号包裹
+
+### 4. menus.md 格式检查
+
+- 3 列格式：一级功能 | 二级功能 | 功能类别
+- 功能类别只能为"页面"
+- 必须包含内置模块：登录、无权限页、权限中心
+
+### 5. 脚本检查（3 个 CLI 工具）
+
+```bash
+node ${WAVE_PLUGIN_ROOT}/scripts/check-naslnames.mjs --dir cwspec/
+node ${WAVE_PLUGIN_ROOT}/scripts/check-crossrefs.mjs cwspec/
+node ${WAVE_PLUGIN_ROOT}/scripts/check-menus.mjs cwspec/menus.md
+```
+
+- `check-naslnames.mjs` — 实体/枚举名与 NASL 保留字冲突
+- `check-crossrefs.mjs` — FK 引用实体是否存在、枚举引用是否存在
+- `check-menus.mjs` — 菜单名称中文、无重复路径、内置模块完整
+
+### 6. 完整性检查
+
+- generation-manifest.json 中列出的每个文档都已生成
+- 实体 .ts 文件中引用的每个枚举都有对应的 .ts 文件
+- 实体 .ts 文件中 `@EntityRelation` 引用的每个实体都有对应的 .ts 文件
+
+## quality-report.md 格式
+
+```markdown
+# 质量验证报告
+
+## 验证结果
+
+| 检查项 | 结果 | 详情 |
+|--------|------|------|
+| LCAP 合规 | ✅/❌ | ... |
+| 实体格式 | ✅/❌ | ... |
+| 枚举格式 | ✅/❌ | ... |
+| 菜单格式 | ✅/❌ | ... |
+| 命名冲突 | ✅/❌ | ... |
+| 交叉引用 | ✅/❌ | ... |
+| 完整性 | ✅/❌ | ... |
+
+## 问题列表
+
+- [问题级别] 问题描述 [文件路径]
+```

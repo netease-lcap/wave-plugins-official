@@ -1,83 +1,57 @@
 # 文件命名规范
 
-## 通用格式
+## 输出文件命名
 
-```
-[中文描述]-[子类型]-[中文名]（[英文名]）.md
-```
-
-## 各类型命名规则
-
-### 索引文件
-使用描述性中文名，不使用 `index.md`：
-- `技术设计大纲.md`（不是 `index.md`）
-- `应用架构设计.md`（不是 `application-structure/index.md`）
-- `数据建模设计.md`（不是 `data-model/index.md`）
-- `业务模块设计.md`（不是 `frontend/index.md`）
-- `依赖与集成设计.md`（不是 `integration/index.md`）
-- `规范需求大纲.md`（不是 `requirements/index.md`）
+所有文件输出到 `cwspec/` 目录（扁平结构，无子目录）。
 
 ### 实体文件
-格式：`[归属子域]-实体-[中文名]（英文名）.md`
-- 示例：`客户管理-实体-客户（Customer）.md`
-- 示例：`权限中心-实体-用户（LcapUser）.md`
 
-### 视图文件
-格式：`[一级功能]-[中文名]（英文名）.md`
-- 示例：`客户管理-客户列表（customerList）.md`
-- 示例：`权限中心-登录页（login）.md`
-- 示例：`首页（dashboard）.md`（仅一级功能为"首页"时省略前缀）
+- 格式：`app.dataSources.defaultDS.entities.EntityName.ts`
+- 示例：
+  - `app.dataSources.defaultDS.entities.Customer.ts`
+  - `app.dataSources.defaultDS.entities.LcapUser.ts`
+  - `app.dataSources.defaultDS.entities.PurchaseApplication.ts`
 
-### ER 图
-`数据建模-实体关系总览图.md`
+### 枚举文件
 
-### 枚举
-`数据建模-枚举.md`
+- 格式：`app.enums.EnumName.ts`
+- 示例：
+  - `app.enums.CustomerStatus.ts`
+  - `app.enums.UserStatusEnum.ts`
+  - `app.enums.YesNo.ts`
 
-### 模块需求
-`[模块中文名].md`（去掉 `module-` 前缀）
-- 示例：`客户管理.md`（不是 `module-customer-management.md`）
+### 需求文件
 
-### 路由
-`业务模块-层级路由.md`
+- `spec.md` — 单一需求规格文档
+- `menus.md` — 功能模块目录表
 
-### 核心领域
-`应用架构-核心领域划分.md`
+### 中间产物
 
-### 服务
-`应用架构-关键服务集成.md`
+- `research-report.md` — 代码研究报告
+- `architecture-plan.md` — 架构设计方案
+- `generation-manifest.json` — 生成清单
+- `quality-report.md` — 质量验证报告
 
-### 菜单
-`功能模块目录.md`
+## directory 字段命名
 
-### UI 规范
-`UI_UE 规范.md`（下划线+空格，匹配基准格式）
+`@Entity`/`@Enum` 装饰器中的 `directory` 字段用于标记分类：
 
-## 特殊字符
+- 格式：`module_en(模块中文)` 或简单名 `modulename`
+- 命名规则：小写字母开头，只能包含小写字母、数字或下划线
+- directory 仅起标记作用，不影响文件路径和命名空间
 
-- `（）`（全角括号）用于文件名中的英文别名
-- `-`（连字符）作为中文描述段之间的分隔符
-- ` `（空格）在基准使用时允许（如 `UI_UE 规范.md`）
-
-## 完整路径映射
-
-| 旧路径（kebab-case） | 新路径（中文+英文） |
+| directory | 说明 |
 |---|---|
-| `plan/index.md` | `plan/技术设计大纲.md` |
-| `plan/ui-design.md` | `plan/UI_UE 规范.md` |
-| `plan/application-structure/index.md` | `plan/application-structure/应用架构设计.md` |
-| `plan/application-structure/cores.md` | `plan/application-structure/应用架构-核心领域划分.md` |
-| `plan/application-structure/services.md` | `plan/application-structure/应用架构-关键服务集成.md` |
-| `plan/data-model/index.md` | `plan/data-model/数据建模设计.md` |
-| `plan/data-model/er-diagram.md` | `plan/data-model/数据建模-实体关系总览图.md` |
-| `plan/data-model/enums.md` | `plan/data-model/数据建模-枚举.md` |
-| `plan/data-model/entity-[name].md` | `plan/data-model/[子域]-实体-[中文名]（英文名）.md` |
-| `plan/frontend/index.md` | `plan/frontend/业务模块设计.md` |
-| `plan/frontend/routes.md` | `plan/frontend/业务模块-层级路由.md` |
-| `plan/frontend/view-[name].md` | `plan/frontend/[一级功能]-[中文名]（英文名）.md` |
-| `plan/backend/` | **已删除** |
-| `plan/integration/index.md` | `plan/integration/依赖与集成设计.md` |
-| `tasks/` | **已删除** |
-| `requirements/index.md` | `requirements/规范需求大纲.md` |
-| `requirements/persistent/menus.md` | `requirements/persistent/功能模块目录.md` |
-| `requirements/standard/module-[name].md` | `requirements/standard/[模块中文名].md` |
+| `permission_center(权限中心)` | 权限管理相关实体/枚举 |
+| `customer_management(客户管理)` | 客户管理相关实体/枚举 |
+| `procurement_management(采购管理)` | 采购管理相关实体/枚举 |
+| `knowledge_document(知识文档)` | 知识文档相关实体/枚举 |
+| `data_reporting(数据报表)` | 数据报表相关实体/枚举 |
+| `common(通用)` | 跨模块通用实体/枚举 |
+
+## 实体名与属性名
+
+- 实体名：PascalCase（如 `Customer`, `PurchaseApplication`, `LcapUser`）
+- 属性名：camelCase（如 `customerName`, `orderId`, `createdTime`）
+- 枚举名：PascalCase（如 `CustomerStatus`, `OrderStatus`, `YesNo`）
+- 枚举键：UPPER_SNAKE_CASE 用单引号包裹（如 `'PENDING'`, `'CLOSED_WON'`）

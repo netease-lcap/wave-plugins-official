@@ -1,74 +1,55 @@
 #!/usr/bin/env node
 /**
- * check-menus.mjs - Validate menu structure from markdown files
+ * check-menus.mjs - Validate menu structure from menus.md
  *
  * Usage:
- *   node check-menus.mjs <menus-file.md> [menus-file.md] ...
+ *   node check-menus.mjs <menus-file.md>
  *
- * Validates:
+ * Validates menus.md 3-column format:
+ *   | 一级功能 | 二级功能 | 功能类别 |
+ *
+ * Rules:
  *   1. Menu names should be in Chinese (not English)
  *   2. No duplicate menu paths
- *   3. Valid menu hierarchy (child menus must have parent)
- *   4. At least one menu item per file
+ *   3. No 逻辑 category items (only 页面 allowed)
+ *   4. Must include built-in modules: 登录, 无权限页, 权限中心
  *
  * Exit codes:
  *   0 - All checks passed
  *   1 - Validation errors found (prints to stderr)
- *   2 - File not found or read error
+ *   2 - File not found
  */
 
 import fs from 'fs';
-import path from 'path';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Parse markdown tables from file content */
 function parseTables(content) {
   const lines = content.split('\n');
-  const tables = [];
-  let currentTable = [];
-  let inTable = false;
-
+  const rows = [];
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith('|')) {
-      if (!inTable) inTable = true;
-      const cells = trimmed
-        .split('|')
-        .map(s => s.trim())
-        .filter(Boolean);
+      const cells = trimmed.split('|').map(s => s.trim()).filter(Boolean);
       // Skip separator lines
-      if (cells.every(c => /^[-:]+$/.test(c))) {
-        continue;
-      }
-      currentTable.push(cells);
-    } else {
-      if (currentTable.length > 0) {
-        tables.push(currentTable);
-        currentTable = [];
-      }
-      inTable = false;
+      if (cells.every(c => /^[-:]+$/.test(c))) continue;
+      rows.push(cells);
     }
   }
-  if (currentTable.length > 0) {
-    tables.push(currentTable);
-  }
-  return tables;
+  return rows;
 }
 
-/** Check if a string contains Chinese characters */
 function hasChinese(str) {
   return /[\u4e00-\u9fff]/.test(str);
 }
 
-/** Check if a string is primarily English (no Chinese) */
 function isOnlyEnglish(str) {
   return str.length > 0 && !hasChinese(str) && /[a-zA-Z]/.test(str);
 }
 
-// ─── Validation Rules ─────────────────────────────────────────────────────
+// ─── Validation ───────────────────────────────────────────────────────────
 
-function validateMenuFile(filePath) {
+function validateMenusFile(filePath) {
   const issues = [];
 
   if (!fs.existsSync(filePath)) {
@@ -77,74 +58,72 @@ function validateMenuFile(filePath) {
   }
 
   const content = fs.readFileSync(filePath, 'utf-8');
-  const tables = parseTables(content);
+  const rows = parseTables(content);
 
-  if (tables.length === 0) {
-    issues.push({ file: filePath, rule: 'no-table', message: 'No menu table found in file' });
+  if (rows.length < 2) {
+    issues.push({ rule: 'no-table', message: 'No valid menu table found (need header + data rows)' });
     return issues;
   }
 
-  // Use the first table found (menu table)
-  const rows = tables[0];
+  // First row is header
+  const header = rows[0];
+  const dataRows = rows.slice(1);
   const seenPaths = new Set();
+  const topLevelNames = new Set();
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    // Menu rows typically have: level1 | level2 | level3 | category | description
-    // The last non-empty cell before category/description is the menu name
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    const col1 = (row[0] || '').trim();  // 一级功能
+    const col2 = (row[1] || '').trim();  // 二级功能
+    const col3 = (row[2] || '').trim();  // 功能类别
 
-    // Find category cell (页面 or 逻辑)
-    const categoryIndex = row.findIndex(cell => cell === '页面' || cell === '逻辑');
-    const menuCells = categoryIndex > 0 ? row.slice(0, categoryIndex) : row;
-
-    // Check each menu level cell
-    for (let j = 0; j < menuCells.length; j++) {
-      const cell = menuCells[j].trim();
-      if (!cell) continue;
-
-      // Rule 1: Menu names should be in Chinese
-      if (isOnlyEnglish(cell)) {
-        issues.push({
-          file: filePath,
-          row: i + 1,
-          level: j + 1,
-          rule: 'english-name',
-          message: `Menu name "${cell}" should be in Chinese (row ${i + 1}, level ${j + 1})`,
-        });
-      }
+    // Rule: No 逻辑 category
+    if (col3 === '逻辑') {
+      issues.push({
+        rule: 'logic-category',
+        message: `Menu item "${col1}/${col2}" has 逻辑 category — only 页面 allowed (row ${i + 2})`,
+      });
     }
 
-    // Rule 2: Build path and check for duplicates
-    const fullPath = menuCells.filter(Boolean).join('/');
+    // Rule: Menu names should be Chinese
+    if (col1 && isOnlyEnglish(col1)) {
+      issues.push({
+        rule: 'english-name',
+        message: `一级功能 "${col1}" should be in Chinese (row ${i + 2})`,
+      });
+    }
+    if (col2 && isOnlyEnglish(col2)) {
+      issues.push({
+        rule: 'english-name',
+        message: `二级功能 "${col2}" should be in Chinese (row ${i + 2})`,
+      });
+    }
+
+    // Build path and check duplicates
+    const fullPath = col2 ? `${col1}/${col2}` : col1;
     if (fullPath) {
       if (seenPaths.has(fullPath)) {
         issues.push({
-          file: filePath,
-          row: i + 1,
           rule: 'duplicate-path',
-          message: `Duplicate menu path: "${fullPath}" (row ${i + 1})`,
+          message: `Duplicate menu path: "${fullPath}" (row ${i + 2})`,
         });
       }
       seenPaths.add(fullPath);
     }
 
-    // Rule 3: Valid hierarchy - if a lower level is filled, parent should exist
-    // (simplified: if column j+1 has value but column j is empty, it's an orphan)
-    let lastFilled = -1;
-    for (let j = 0; j < menuCells.length; j++) {
-      if (menuCells[j].trim()) {
-        if (j > lastFilled + 1 && lastFilled >= 0) {
-          // There's a gap - orphan child
-          issues.push({
-            file: filePath,
-            row: i + 1,
-            rule: 'orphan-menu',
-            message: `Orphan menu at level ${j + 1}, missing parent (row ${i + 1})`,
-          });
-        }
-        lastFilled = j;
-      }
-    }
+    // Track top-level names
+    if (col1) topLevelNames.add(col1);
+  }
+
+  // Rule: Must include built-in modules
+  if (!topLevelNames.has('登录')) {
+    issues.push({ rule: 'missing-builtin', message: 'Missing built-in module: 登录' });
+  }
+  if (!topLevelNames.has('无权限页')) {
+    issues.push({ rule: 'missing-builtin', message: 'Missing built-in module: 无权限页' });
+  }
+  if (!topLevelNames.has('权限中心')) {
+    issues.push({ rule: 'missing-builtin', message: 'Missing built-in module: 权限中心' });
   }
 
   return issues;
@@ -155,24 +134,16 @@ function validateMenuFile(filePath) {
 const files = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
 
 if (files.length === 0) {
-  console.log('Usage: node check-menus.mjs <menus-file.md> [menus-file.md] ...');
+  console.log('Usage: node check-menus.mjs <menus-file.md>');
   console.log('');
-  console.log('Checks:');
-  console.log('  - Menu names should be in Chinese');
-  console.log('  - No duplicate menu paths');
-  console.log('  - Valid menu hierarchy (no orphan children)');
-  console.log('  - At least one menu table per file');
-  console.log('');
-  console.log('Examples:');
-  console.log('  node check-menus.mjs plan/menus.md');
-  console.log('  node check-menus.mjs plan/menus.md plan/admin-menus.md');
+  console.log('Validates 3-column menu format: 一级功能 | 二级功能 | 功能类别');
   process.exit(0);
 }
 
 const allIssues = [];
 
 for (const file of files) {
-  const issues = validateMenuFile(file);
+  const issues = validateMenusFile(file);
   allIssues.push(...issues);
 }
 
@@ -183,6 +154,6 @@ if (allIssues.length > 0) {
   }
   process.exit(1);
 } else {
-  console.log(`OK: All ${files.length} menu file(s) passed validation`);
+  console.log(`OK: Menu file(s) passed validation`);
   process.exit(0);
 }

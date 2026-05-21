@@ -1,128 +1,308 @@
-# 实体类型定义
+# 实体类型定义（TypeScript）
 
-本文档描述生成实体类型定义的流程与注意事项，我们使用 NASL（NaturalTS）+ 表格的格式来描述实体类型定义，必须严格遵守规则的前提下遵守以下流程生成。
+每个实体一个 `.ts` 文件，文件路径即命名空间：`app.dataSources.defaultDS.entities.EntityName.ts`
 
-## 关键规则
+## 基础类型
 
-- 禁止使用 union 类型
-- 禁止使用 `import` 引用任何代码模块
-- 禁止生成 mock 数据，禁止生成任何 mock 相关的代码
-- 禁止使用 `a: String | null`，推荐使用 `a?: String`
-- 实体属性 id, xxxId 这类标识必须使用 `Integer` 类型
-- 实体必须包含以下属性：id（Integer）、createdTime（DateTime）、updatedTime（DateTime）、createdBy（String）、updatedBy（String）；
-- 实体名称额外不能与常用数据库的关键字冲突，如 select, where, join 等等，也能不叫 cursor, analyze, check, decimal, explain, match, natural, user, view, cost 等等。实体属性不受这一条限制。
-- 枚举属性严格遵循示例中的 特别注意 格式
-- 实体属性严格遵循示例中的 特别注意 格式
-- 必须仔细思考实体对应的业务功能，生成每个实体属性都要有规范需求文档的明确要求，禁止虚构任何规范需求文档没有提到的实体属性。
-<%= parts['sub-attention-1-1-entities.md'] %>
-
-### 文件夹标签
-
-实体装饰器 `@Entity` 支持 directory 字段用于文件夹标签：
-
-<%= parts['spec-6-1.directory.md'] %>
-
-## Markdown 表格格式规范
-
-**严格遵守以下表格格式规则，避免生成格式错误的表格：**
-
-1. **表头行必须在最前面**，紧跟在空行之后
-2. **分隔符行必须紧跟在表头行之后**，格式为 `| --- | --- | --- | --- |`
-3. **所有行的列数必须完全一致**，包括表头、分隔符和数据行
-4. **禁止在表格中间插入表头行或分隔符行**
-5. **每一行必须以 `|` 开头，以 `|` 结尾**
-6. **列与列之间用 `|` 分隔，前后各有一个空格**
-
-**正确的表格格式示例：**
-```
-| 字段名 | 标题 | 数据类型 | 字段特性 | 默认值 | 存储类型（可选） | 限制规则（可选） |
-| --- | --- | --- | --- | --- | --- | --- |
-| id | 主键 | Integer | 主键、非空 | （自动生成） | | |
-| name | 名称 | String | 非空 | | | |
+```typescript
+// NASL 基础类型
+type String = string;       // 字符串
+type Boolean = boolean;     // 布尔
+type Integer = number;      // 整数（安全范围: -2^53+1 到 2^53-1）
+type Decimal = number;      // 小数
+type Date;                  // 日期
+type Time;                  // 时间
+type DateTime;              // 日期时间
 ```
 
-**常见错误（禁止）：**
-- ❌ 表头和分隔符位置颠倒或在中间出现
-- ❌ 不同行的列数不一致（如某行有5列，某行有4列）
-- ❌ 分隔符行出现在数据行中间
-- ❌ 缺少行首或行尾的 `|` 符号
+实体属性只能使用 NASL 基础类型（String, Boolean, Integer, Decimal, Date, Time, DateTime）和枚举类型，禁止使用 List、Map 或其他复合类型。
 
-## 工作流程
+## 关键约束
 
-### 一、阅读并充分理解以下知识文档
+- 每个文件只需 `export`，不需要 `import`（已支持自动 import）
+- 实体名 PascalCase，属性名 camelCase
+- 实体名禁止与 JS/TS/Java 关键字冲突：package, import, class, constructor 等
+- 实体名禁止与 NASL 关键字冲突：app, apps, mod, mods, module, modules, entity, entities, struct, structure, structures, enum, enums, logic, logics, interface, interfaces, view, views, process, processes, role, roles, theme, config, configuration, dep, deps, dependency, dependencies, ext, exts, extension, extensions, com, coms, component, components, viewComponent, viewComponents, processComponent, processComponents, constant, constants, return, returns, variable, variables, case, cases, element, elements, rule, rules, attr, attrs, event, events, slot, slots, method, methods, connector, nasl, core, collection, interface, ui, util, browser, validation, process, annotation, database, dataSource, dataSet, pc, h5, event, logging, i18n, debug, debugger, inspect, auth, experimental, fs, file, path, math, object, system, boolean, string, integer, decimal, date, time, datetime, length, list, map
+- 实体名额外禁止与数据库关键字冲突：select, where, join, cursor, analyze, check, decimal, explain, match, natural, user, view, cost 等
+- 属性默认值只支持布尔字面量、数字字面量、字符串字面量、枚举值和 null，禁止表达式
+- id, createdTime, updatedTime 的默认值会自动生成，禁止手动设置
 
-**NASL 基础类型**：（nasl-book/K002-nasl--types.md）
-**NASL 实体、数据结构和枚举及相关示例**：（nasl-book/K003-nasl--enums-entities-structures.md）
+## @Entity 装饰器
 
-### 二、完整阅读充分理解 数据建模-枚举（data-model/enums.md）
-
-这里包含实体中所有需要用到的 枚举。
-
-### 三、理解实体类型定义通用格式
-
-以下为通用的输出示例，这里需要说明以下几点：
-- 尽管这里没有添加说明注释，但是实际生成每个属性添加注释，注释包含实体属性的中文名称、详细的功能描述；
-- `Product`、`Order` 等实体名称和 `name`、`totalAmount` 等属性名称需要根据实际业务需要进行修改；
-- 总是生成两种格式：NASL（NaturalTS）格式 + 方便阅读的表格格式；
-- 代码块一定要标注 naturalts 和 path。
-- **表格格式必须严格遵守上述 Markdown 表格格式规范，确保列数一致、表头在最前、分隔符紧跟表头**
-
-特别注意：生成 实体类型定义 后，必须思考是否严格遵守上述所有关键规则。如果生成的 实体类型定义 没有严格遵守上述所有关键规则，必须重新生成，直到严格遵守上述所有关键规则
-
-## 商品（Product）
-
-(...一段关于该实体的详细描述...)
-
-```naturalts path="app.dataSources.defaultDS.entities.Product.ts"
-<%= parts['sub-examples-1-1-entities-product.md'] %>
+```typescript
+@Entity({
+    title: '客户',                                          // 实体标题（必填）
+    description: '记录客户的基本信息',                       // 描述（必填）
+    directory: 'customer_management(客户管理)',               // 目录分类
+})
 ```
 
-| 字段名 | 标题 | 数据类型 | 字段特性（主键、唯一、非空、外键等） | 默认值 | 存储类型（可选） | 限制规则（可选） |
-| --- | --- | --- | --- | --- | --- | --- |
-| id | 主键 | Integer | 主键、非空 | （自动生成） | | |
-| createdTime | 创建时间 | DateTime | 非空 | （自动生成） | | |
-| updatedTime | 更新时间 | DateTime | 非空 | （自动生成） | | |
-| createdBy | 创建人 | String | 非空 | （自动生成） | | |
-| updatedBy | 更新人 | String | 非空 | （自动生成） | | |
-| name | 商品名称 | String | 非空 | | VARCHAR(50) | |
-| description | 商品描述 | String | | '' | TEXT | |
-| price | 售价 | Decimal | 非空 | 0 | DECIMAL(10, 2) | min(0) |
-| stock | 库存数量 | Integer | | 0 | | min(0), max(999999) |
-| isOnSale | 是否上架 | Boolean | 非空 | false | | |
+- `directory` 格式：简单名 `'newfolder1'` 或带标题 `'permission_center(权限中心)'`
+- `directory` 命名规则：小写字母开头，只能包含小写字母、数字或下划线
+- `directory` 仅起标记作用，不影响命名空间和文件路径
+- **禁止填写** `uuid`、`tableName`、`columnName`（这些由系统自动生成）
 
-## 订单（Order）
+## @EntityProperty 装饰器
 
-(...一段关于该实体的详细描述...)
-
-```naturalts path="app.dataSources.defaultDS.entities.Order.ts"
-<%= parts['sub-examples-1-2-entities-order.md'] %>
+```typescript
+@EntityProperty({
+    title: '客户名称',                    // 属性标题（必填）
+    description: '客户的企业名称',        // 属性描述
+    required: true,
+    primaryKey: false,
+    generationRule: 'manual',            // 系统字段为 'auto'，业务字段省略或 'manual'
+    dbType: VARCHAR(100),
+    rules: [min(0), max(100)],
+})
+customerName: String = "";
 ```
 
-| 字段名 | 标题 | 数据类型 | 字段特性（主键、唯一、非空、外键等） | 默认值 | 存储类型（可选） | 限制规则（可选） |
-| --- | --- | --- | --- | --- | --- | --- |
-| id | 主键 | Integer | 主键、非空 | （自动生成） | | |
-| createdTime | 创建时间 | DateTime | 非空 | （自动生成） | | |
-| updatedTime | 更新时间 | DateTime | 非空 | （自动生成） | | |
-| createdBy | 创建人 | String | 非空 | （自动生成） | | |
-| updatedBy | 更新人 | String | 非空 | （自动生成） | | |
-| orderNo | 订单编号 | String | 非空 | | VARCHAR(64) | |
-| productId | 商品 | Integer | 非空、外键关联实体 Product（PROTECT） | | | |
-| quantity | 购买数量 | Integer | 非空 | 1 | | min(1), max(9999) |
-| totalAmount | 订单金额 | Decimal | 非空 | 0 | DECIMAL(12, 2) | min(0) |
-| status | 订单状态 | app.enums.OrderStatus | 非空 | OrderStatus['PENDING'] | | |
-| isPaid | 是否已支付 | Boolean | 非空 | false | | |
-| remark | 备注 | String | | '' | | |
+- `generationRule`：系统字段（id、createdTime、updatedTime、createdBy、updatedBy）必须为 `'auto'`；Lcap* 实体所有属性均为 `'auto'`
+- `title` 和 `description` 必须填写
+- **禁止填写** `uuid`、`columnName`（这些由系统自动生成）
 
-## 表格生成检查清单
+## @EntityRelation 装饰器（外键关联）
 
-**生成每个实体的表格时，必须逐项检查以下条件：**
+```typescript
+@EntityProperty({ title: '所属销售' })
+@EntityRelation<app.dataSources.defaultDS.entities.LcapUser['userId']>('CASCADE')
+ownerId: String;
+```
 
-- [ ] **表头行在最前面** - 第一行必须是列标题（字段名、标题、数据类型、字段特性、默认值、存储类型（可选）、限制规则（可选））
-- [ ] **分隔符行紧跟表头** - 第二行必须是 `| --- | --- | --- | --- | --- | --- | --- |`（7列对应7个分隔符）
-- [ ] **列数完全一致** - 所有行（包括表头、分隔符、数据行）的列数必须相同（7列）
-- [ ] **行首行尾都有竖线** - 每一行都以 `|` 开头，以 `|` 结尾
-- [ ] **列间距正确** - 每个 `|` 前后各有一个空格：`| 内容 |`
-- [ ] **禁止中间插入表头** - 不允许在数据行中间出现表头行或分隔符行
-- [ ] **禁止列数变化** - 不允许某行有8列，另一行有7列的情况
-- [ ] **所有必需字段都包含** - id、createdTime、updatedTime、createdBy、updatedBy 必须在表格中
-- [ ] **字段顺序合理** - 系统字段（id、createdTime等）在前，业务字段在后
+- **必须带泛型类型参数**：`@EntityRelation<app.dataSources.defaultDS.entities.TargetEntity['field']>`
+- `deleteRule`：只支持 `'PROTECT'` 或 `'CASCADE'`
+
+## dbType 规范
+
+**Integer**：
+| dbType | 说明 |
+|---|---|
+| _(省略)_ | 默认 bigint，绝大多数场景省略即可 |
+| TINYINT | 1字节，范围 -128~127 |
+| SMALLINT | 2字节，范围 -32768~32767 |
+| INT(11) | 4字节 |
+
+**Decimal**：
+| dbType | 说明 |
+|---|---|
+| DECIMAL(precision, scale) | 固定精度小数，如 DECIMAL(10, 2) |
+| DOUBLE | 双精度浮点数 |
+
+> Decimal 属性**必须始终显式写明 dbType**。
+
+**String**：
+| dbType | 说明 |
+|---|---|
+| _(省略)_ | 默认 VARCHAR(255) |
+| VARCHAR(n) | 可变长度，自动派生 maxLength(n) |
+| CHAR(n) | 固定长度 |
+| TEXT | 长文本（~65535字节） |
+| LONGTEXT | 超长文本（~4GB） |
+
+**DateTime**：省略默认 DATETIME，也可写 TIMESTAMP
+
+**Boolean、Date、Time、枚举类型禁止设置 dbType。**
+
+## rules 规范
+
+```typescript
+rules: [min(0), max(100)]      // Integer/Decimal
+rules: [minLength(1)]          // String
+```
+
+- Integer/Decimal：只能用 `min(value)` / `max(value)`
+- String：只能用 `minLength(value)` / `maxLength(value)`
+- Boolean/Date/Time/DateTime/枚举：不支持 rules
+- VARCHAR(n) 自动派生 maxLength(n)，不要重复手写
+- TEXT/LONGTEXT 不会自动派生，如需限制须手动写 maxLength
+
+## 系统审计字段（每个实体必须包含）
+
+```typescript
+@EntityProperty({ title: '主键', primaryKey: true, generationRule: 'auto' })
+id: Integer;
+
+@EntityProperty({ title: '创建时间', generationRule: 'auto' })
+createdTime: DateTime;
+
+@EntityProperty({ title: '更新时间', generationRule: 'auto' })
+updatedTime: DateTime;
+
+@EntityProperty({ title: '创建者', generationRule: 'auto' })
+createdBy: String;
+
+@EntityProperty({ title: '更新者', generationRule: 'auto' })
+updatedBy: String;
+```
+
+## 枚举属性写法
+
+```typescript
+@EntityProperty({ title: '客户状态', required: true })
+customerStatus: app.enums.CustomerStatus = app.enums.CustomerStatus['POTENTIAL'];
+```
+
+## LCAP 内置实体 FK 关联规范（强制）
+
+所有涉及以下业务概念的属性，必须使用对应的 LCAP 内置实体 FK 关联，禁止使用基础类型：
+
+1. **人员属性 → LcapUser**：userId、assigneeId、ownerId、manager、operator、approver 等
+   ```typescript
+   @EntityProperty({ title: '所属销售' })
+   @EntityRelation<app.dataSources.defaultDS.entities.LcapUser['userId']>('CASCADE')
+   ownerId: String;
+   ```
+   - **禁止**将 `createdBy`/`updatedBy` 关联到 LcapUser（它们保持 String + generationRule:'auto'）
+
+2. **权限属性 → LcapPermission**：permissionId 等
+   ```typescript
+   @EntityRelation<app.dataSources.defaultDS.entities.LcapPermission['id']>('CASCADE')
+   permissionId: Integer;
+   ```
+
+3. **角色属性 → LcapRole**：roleId 等
+   ```typescript
+   @EntityRelation<app.dataSources.defaultDS.entities.LcapRole['id']>('CASCADE')
+   roleId: Integer;
+   ```
+
+4. **部门属性 → LcapDepartment**：departmentId、deptId 等
+   ```typescript
+   @EntityRelation<app.dataSources.defaultDS.entities.LcapDepartment['deptId']>('CASCADE')
+   deptId: String;
+   ```
+
+**关键原则**：
+- 禁止创建 User、Employee、Staff、Role、Permission、Department、Organization 等自定义实体
+- 必须通过 FK 关联，不要用 string/integer 存储
+- 如果某个属性属于固定取值、分类、状态、布尔语义，必须优先复用已有枚举，禁止退化为 Boolean/String/Integer
+
+## 完整示例
+
+### Product 实体（`app.dataSources.defaultDS.entities.Product.ts`）
+
+```typescript
+@Entity({
+    title: '商品',
+    description: '记录商品的基本信息，包括名称、描述、售价、库存及上架状态',
+    directory: 'business_management(业务管理)',
+})
+export class Product {
+    @EntityProperty({ title: '主键', primaryKey: true, generationRule: 'auto' })
+    id: Integer;
+
+    @EntityProperty({ title: '创建时间', generationRule: 'auto' })
+    createdTime: DateTime;
+
+    @EntityProperty({ title: '更新时间', generationRule: 'auto' })
+    updatedTime: DateTime;
+
+    @EntityProperty({ title: '创建者', generationRule: 'auto' })
+    createdBy: String;
+
+    @EntityProperty({ title: '更新者', generationRule: 'auto' })
+    updatedBy: String;
+
+    @EntityProperty({ title: '商品名称', description: '最多50个字符', dbType: VARCHAR(50), required: true })
+    name: String;
+
+    @EntityProperty({ title: '商品描述', description: '长文本，无字数限制', dbType: TEXT })
+    description: String = '';
+
+    @EntityProperty({ title: '售价', description: '单位：元，最多两位小数', dbType: DECIMAL(10, 2), required: true, rules: [min(0)] })
+    price: Decimal = 0;
+
+    @EntityProperty({ title: '库存数量', rules: [min(0), max(999999)] })
+    stock: Integer = 0;
+
+    @EntityProperty({ title: '是否上架', required: true })
+    isOnSale: Boolean = false;
+}
+export const ProductEntity = createEntity<Product>();
+```
+
+### Order 实体（含 FK 和枚举）
+
+```typescript
+@Entity({
+    title: '订单',
+    description: '记录订单信息，包含关联商品、数量、金额及订单状态',
+    directory: 'business_management(业务管理)',
+})
+export class Order {
+    @EntityProperty({ title: '主键', primaryKey: true, generationRule: 'auto' })
+    id: Integer;
+
+    @EntityProperty({ title: '创建时间', generationRule: 'auto' })
+    createdTime: DateTime;
+
+    @EntityProperty({ title: '更新时间', generationRule: 'auto' })
+    updatedTime: DateTime;
+
+    @EntityProperty({ title: '创建者', generationRule: 'auto' })
+    createdBy: String;
+
+    @EntityProperty({ title: '更新者', generationRule: 'auto' })
+    updatedBy: String;
+
+    @EntityProperty({ title: '订单编号', dbType: VARCHAR(64), required: true })
+    orderNo: String;
+
+    @EntityProperty({ title: '商品' })
+    @EntityRelation<app.dataSources.defaultDS.entities.Product['id']>('PROTECT')
+    productId: Integer;
+
+    @EntityProperty({ title: '购买数量', required: true, rules: [min(1), max(9999)] })
+    quantity: Integer = 1;
+
+    @EntityProperty({ title: '订单金额', description: '单位：元', dbType: DECIMAL(12, 2), required: true, rules: [min(0)] })
+    totalAmount: Decimal = 0;
+
+    @EntityProperty({ title: '订单状态', required: true })
+    status: app.enums.OrderStatus = app.enums.OrderStatus['PENDING'];
+
+    @EntityProperty({ title: '是否已支付', required: true })
+    isPaid: Boolean = false;
+
+    @EntityProperty({ title: '备注' })
+    remark: String = '';
+}
+export const OrderEntity = createEntity<Order>();
+```
+
+### Customer 实体（含 LcapUser FK）
+
+```typescript
+@Entity({
+    title: '客户',
+    description: '记录客户的基本信息，包括客户名称、联系人、联系方式、客户状态及所属销售等信息',
+    directory: 'customer_management(客户管理)',
+})
+export class Customer {
+    @EntityProperty({ title: '主键', primaryKey: true, generationRule: 'auto' })
+    id: Integer;
+
+    @EntityProperty({ title: '创建时间', generationRule: 'auto' })
+    createdTime: DateTime;
+
+    @EntityProperty({ title: '更新时间', generationRule: 'auto' })
+    updatedTime: DateTime;
+
+    @EntityProperty({ title: '创建者', generationRule: 'auto' })
+    createdBy: String;
+
+    @EntityProperty({ title: '更新者', generationRule: 'auto' })
+    updatedBy: String;
+
+    @EntityProperty({ title: '客户名称', description: '客户的企业名称或个人姓名', required: true, dbType: VARCHAR(100) })
+    customerName: String = "";
+
+    @EntityProperty({ title: '客户状态', description: '客户当前的状态分类', required: true })
+    customerStatus: app.enums.CustomerStatus = app.enums.CustomerStatus['POTENTIAL'];
+
+    @EntityProperty({ title: '所属销售', description: '负责该客户的销售人员' })
+    @EntityRelation<app.dataSources.defaultDS.entities.LcapUser['userId']>('CASCADE')
+    ownerId: String;
+}
+export const CustomerEntity = createEntity<Customer>();
+```

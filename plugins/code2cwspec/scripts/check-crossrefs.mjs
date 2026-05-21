@@ -1,18 +1,16 @@
 #!/usr/bin/env node
 /**
- * check-crossrefs.mjs - Validate cross-references across generated documents
+ * check-crossrefs.mjs - Validate cross-references across generated .ts files
  *
  * Usage:
  *   node check-crossrefs.mjs <directory> [options]
  *
  * Validates:
- *   1. Entity references (FK fields) match defined entity files
- *   2. View references match defined view files
- *   3. Markdown links point to existing files
+ *   1. @EntityRelation targets have corresponding entity .ts files
+ *   2. app.enums.XXX references have corresponding enum .ts files
  *
  * Options:
  *   --base <dir>   Base directory to scan (default: current directory)
- *   --strict       Also check markdown links
  *
  * Exit codes:
  *   0 - All cross-references valid
@@ -24,40 +22,27 @@ import path from 'path';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Find all files matching a pattern under a directory */
+/** Find all files matching a pattern under a directory (flat only) */
 function findFiles(dir, pattern) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
-
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...findFiles(fullPath, pattern));
-    } else if (pattern.test(entry.name)) {
-      results.push(fullPath);
+    if (!entry.isDirectory() && pattern.test(entry.name)) {
+      results.push(path.join(dir, entry.name));
     }
   }
   return results;
 }
 
-/** Extract entity names from Chinese+English hybrid filenames like 权限中心-实体-用户（LcapUser）.md */
+/** Extract defined entity names from .ts files: app.dataSources.defaultDS.entities.XXX.ts */
 function extractEntityDefinitions(dir) {
-  const entityFiles = findFiles(dir, /^.*-实体-.*（[^）]+）\.md$/);
+  const entityFiles = findFiles(dir, /^app\.dataSources\.defaultDS\.entities\.[^.]+\.ts$/);
   const names = new Set();
   for (const file of entityFiles) {
     const baseName = path.basename(file);
-    // Extract English name from full-width parentheses: 权限中心-实体-用户（LcapUser）.md → LcapUser
-    const match = baseName.match(/[（(]([A-Za-z][A-Za-z0-9_]*)[）)]\.md$/);
-    if (match) {
-      names.add(match[1]);
-    }
-  }
-  // Also support legacy kebab-case entity-*.md files
-  const legacyFiles = findFiles(dir, /^entity-[^.]+\.md$/);
-  for (const file of legacyFiles) {
-    const baseName = path.basename(file);
-    const match = baseName.match(/^entity-([^.]+)\.md$/);
+    // Extract entity name: app.dataSources.defaultDS.entities.Customer.ts → Customer
+    const match = baseName.match(/^app\.dataSources\.defaultDS\.entities\.([^.]+)\.ts$/);
     if (match) {
       names.add(match[1]);
     }
@@ -65,25 +50,13 @@ function extractEntityDefinitions(dir) {
   return names;
 }
 
-/** Extract view names from Chinese+English hybrid filenames like 权限中心-登录页（login）.md */
-function extractViewDefinitions(dir) {
-  const viewFiles = findFiles(dir, /^[^/]*[^-]*-[^（]+（[^）]+）\.md$/);
+/** Extract defined enum names from .ts files: app.enums.XXX.ts */
+function extractEnumDefinitions(dir) {
+  const enumFiles = findFiles(dir, /^app\.enums\.[^.]+\.ts$/);
   const names = new Set();
-  for (const file of viewFiles) {
+  for (const file of enumFiles) {
     const baseName = path.basename(file);
-    // Skip entity files
-    if (baseName.includes('-实体-')) continue;
-    // Extract English name from full-width parentheses
-    const match = baseName.match(/[（(]([a-z][a-zA-Z0-9_]*)[）)]\.md$/);
-    if (match) {
-      names.add(match[1]);
-    }
-  }
-  // Also support legacy kebab-case view-*.md files
-  const legacyFiles = findFiles(dir, /^view-[^.]+\.md$/);
-  for (const file of legacyFiles) {
-    const baseName = path.basename(file);
-    const match = baseName.match(/^view-([^.]+)\.md$/);
+    const match = baseName.match(/^app\.enums\.([^.]+)\.ts$/);
     if (match) {
       names.add(match[1]);
     }
@@ -91,88 +64,65 @@ function extractViewDefinitions(dir) {
   return names;
 }
 
-/** Extract foreign entity references from entity files */
+/** Extract @EntityRelation references from entity .ts files */
 function extractFKReferences(dir) {
-  // Support both Chinese-named and kebab-case entity files
-  const entityFiles = [
-    ...findFiles(dir, /^.*-实体-.*（[^）]+）\.md$/),
-    ...findFiles(dir, /^entity-[^.]+\.md$/),
-  ];
+  const entityFiles = findFiles(dir, /^app\.dataSources\.defaultDS\.entities\.[^.]+\.ts$/);
   const refs = [];
 
   for (const file of entityFiles) {
     const content = fs.readFileSync(file, 'utf-8');
-    const lines = content.split('\n');
-    let inTable = false;
+    const sourceFile = path.relative(process.cwd(), file);
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('|') && trimmed.includes('字段名') && trimmed.includes('外键')) {
-        inTable = true;
-        continue;
-      }
-      if (inTable && trimmed.startsWith('|') && trimmed.includes('---')) {
-        continue;
-      }
-      if (inTable && trimmed.startsWith('|')) {
-        const cols = trimmed.split('|').map(s => s.trim()).filter(Boolean);
-        if (cols.length >= 4) {
-          const characteristics = cols[3] || '';
-          // Extract foreign entity name: "外键关联实体XXX", "外键(XXX)", "外键：XXX", "外键-XXX"
-          const fkMatch = characteristics.match(/外键(?:关联实体)?[\s:：\-（(]*([A-Z][A-Za-z0-9]*)/);
-          if (fkMatch) {
-            refs.push({
-              file: path.relative(process.cwd(), file),
-              field: cols[0],
-              referencedEntity: fkMatch[1],
-            });
-          }
-        }
-      }
-      // Table ends when line doesn't start with |
-      if (inTable && !trimmed.startsWith('|')) {
-        inTable = false;
+    // Match: @EntityRelation<app.dataSources.defaultDS.entities.TargetEntity['field']>('PROTECT'|'CASCADE')
+    const fkRegex = /@EntityRelation<app\.dataSources\.defaultDS\.entities\.([A-Za-z_][A-Za-z0-9_]*)\[['"]([^'"]+)['"]\]>/g;
+    let m;
+    while ((m = fkRegex.exec(content)) !== null) {
+      refs.push({
+        file: sourceFile,
+        referencedEntity: m[1],
+        referencedField: m[2],
+      });
+    }
+  }
+  return refs;
+}
+
+/** Extract app.enums.XXX references from entity .ts files */
+function extractEnumReferences(dir) {
+  const entityFiles = findFiles(dir, /^app\.dataSources\.defaultDS\.entities\.[^.]+\.ts$/);
+  const refs = [];
+
+  for (const file of entityFiles) {
+    const content = fs.readFileSync(file, 'utf-8');
+    const sourceFile = path.relative(process.cwd(), file);
+
+    // Match: app.enums.EnumName (in type annotations or default values)
+    const enumRegex = /app\.enums\.([A-Za-z_][A-Za-z0-9_]*)/g;
+    const seen = new Set();
+    let m;
+    while ((m = enumRegex.exec(content)) !== null) {
+      const enumName = m[1];
+      const key = `${sourceFile}:${enumName}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        refs.push({
+          file: sourceFile,
+          referencedEnum: enumName,
+        });
       }
     }
   }
   return refs;
 }
 
-/** Extract markdown file links from all .md files */
-function extractMarkdownLinks(dir) {
-  const files = findFiles(dir, /\.md$/);
-  const links = [];
-
-  for (const file of files) {
-    const content = fs.readFileSync(file, 'utf-8');
-    // Match [text](path/to/file.md) or (path/to/file.md) — support Chinese characters in paths
-    const linkReg = /\[([^\]]*)\]\(([^)]+\.md[^)]*)\)/g;
-    let m;
-    while ((m = linkReg.exec(content)) !== null) {
-      const linkPath = m[2].replace(/^[\/]/, ''); // strip leading /
-      const lineNum = content.substring(0, m.index).split('\n').length;
-      links.push({
-        file: path.relative(baseDir, file),
-        line: lineNum,
-        text: m[1],
-        target: linkPath,
-      });
-    }
-  }
-  return links;
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 let baseDir = '.';
-let strict = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--base' && args[i + 1]) {
     baseDir = args[++i];
-  } else if (args[i] === '--strict') {
-    strict = true;
   } else if (!args[i].startsWith('--')) {
     baseDir = args[i];
   }
@@ -187,9 +137,9 @@ if (!fs.existsSync(baseDir)) {
 
 const issues = [];
 
-// 1. Collect all defined entities and views
+// 1. Collect all defined entities and enums
 const definedEntities = extractEntityDefinitions(baseDir);
-const definedViews = extractViewDefinitions(baseDir);
+const definedEnums = extractEnumDefinitions(baseDir);
 
 // 2. Check FK references
 const fkRefs = extractFKReferences(baseDir);
@@ -198,35 +148,20 @@ for (const ref of fkRefs) {
     issues.push({
       rule: 'missing-entity',
       file: ref.file,
-      field: ref.field,
-      message: `FK references entity "${ref.referencedEntity}" but no corresponding entity file found`,
+      message: `@EntityRelation references entity "${ref.referencedEntity}" but no corresponding .ts file found`,
     });
   }
 }
 
-// 3. Check markdown links (strict mode only)
-if (strict) {
-  const links = extractMarkdownLinks(baseDir);
-  for (const link of links) {
-    // Skip external URLs and anchor-only links
-    if (link.target.startsWith('http') || link.target.startsWith('mailto:') || link.target.startsWith('#')) continue;
-
-    // Resolve relative paths against the source file's directory
-    const sourceFileDir = path.dirname(path.join(baseDir, link.file));
-    const resolvedPath = path.resolve(sourceFileDir, link.target);
-
-    // Skip links that point outside baseDir (external references)
-    if (!resolvedPath.startsWith(baseDir)) continue;
-
-    // Verify the target exists
-    if (!fs.existsSync(resolvedPath)) {
-      issues.push({
-        rule: 'broken-link',
-        file: link.file,
-        line: link.line,
-        message: `Markdown link to "${link.target}" does not exist (line ${link.line})`,
-      });
-    }
+// 3. Check enum references
+const enumRefs = extractEnumReferences(baseDir);
+for (const ref of enumRefs) {
+  if (!definedEnums.has(ref.referencedEnum)) {
+    issues.push({
+      rule: 'missing-enum',
+      file: ref.file,
+      message: `References app.enums.${ref.referencedEnum} but no corresponding .ts file found`,
+    });
   }
 }
 
@@ -235,15 +170,14 @@ if (strict) {
 if (issues.length > 0) {
   console.error(`Found ${issues.length} cross-reference issue(s):`);
   for (const issue of issues) {
-    console.error(`  - [${issue.rule}] ${issue.message}${issue.file ? ` [file: ${issue.file}]` : ''}`);
+    console.error(`  - [${issue.rule}] ${issue.message} [file: ${issue.file}]`);
   }
   process.exit(1);
 } else {
   console.log(`OK: No cross-reference issues found`);
-  if (strict) {
-    console.log(`  - ${definedEntities.size} entities defined`);
-    console.log(`  - ${definedViews.size} views defined`);
-    console.log(`  - ${fkRefs.length} FK references validated`);
-  }
+  console.log(`  - ${definedEntities.size} entities defined`);
+  console.log(`  - ${definedEnums.size} enums defined`);
+  console.log(`  - ${fkRefs.length} FK references validated`);
+  console.log(`  - ${enumRefs.length} enum references validated`);
   process.exit(0);
 }

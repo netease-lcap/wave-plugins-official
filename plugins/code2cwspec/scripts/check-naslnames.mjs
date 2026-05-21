@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * check-naslnames.mjs - Validate entity/view names against NASL reserved words
+ * check-naslnames.mjs - Validate entity/enum names against NASL reserved words
+ *
+ * Scans .ts entity/enum files in cwspec/ or accepts individual names.
  *
  * Usage:
- *   node check-naslnames.mjs <name-or-file> [name-or-file] ...
+ *   node check-naslnames.mjs <name> [name] ...
  *   node check-naslnames.mjs --type entityName <name> [name] ...
+ *   node check-naslnames.mjs --dir cwspec/
  *
  * Options:
  *   --type <type>   Keyword type to check against (default: entityName)
- *                   Available: common, entityName, viewName, enumName,
- *                   structureName, entityProperty, enumItem, structureProperty,
- *                   frontendPath, strict
- *   --file <path>   Read names from a markdown file (extracts titles)
+ *                   Available: common, entityName, enumName, entityProperty, strict
+ *   --dir <path>    Scan all .ts entity/enum files in directory
  *
  * Exit codes:
  *   0 - No conflicts found
@@ -21,7 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 
-// ─── KEYWORDS_MAP (extracted from check.mjs) ──────────────────────────────
+// ─── KEYWORDS_MAP ──────────────────────────────────────────────────────────
 
 const COMMON_KEYWORDS = [
   'abstract','continue','for','new','switch','assert','default','goto','package',
@@ -47,6 +48,7 @@ const COMMON_KEYWORDS = [
   'database','dataSource','dataSet','pc','h5','logging','i18n','debug','inspect',
   'auth','authorization','org','organization','message','experimental','fs','file',
   'path','math','system','integer','decimal','date','time','datetime','length',
+  'list','map',
 ];
 
 const ENTITY_NAME_KEYWORDS = [
@@ -90,7 +92,7 @@ const ENTITY_NAME_KEYWORDS = [
   'semanticsimilaritydetailstable','semanticsimilaritytable','session_user','setuser',
   'shutdown','some','statistics','system_user','tablesample','textsize','top','tran',
   'transaction','truncate','try_convert','tsequal','unpivot','updatetext','user',
-  'waitfor','within group','writetext','access','account','activate','admin','advise',
+  'waitfor','within group','writedext','access','account','activate','admin','advise',
   'after','all_rows','allocate','archive','archivelog','array','at','audit',
   'authenticated','autoextend','automatic','become','bfile','bitmap','block','body',
   'cache','cache_instances','cancel','cast','cfile','chained','char_cs','choose',
@@ -142,35 +144,18 @@ const ENTITY_NAME_KEYWORDS = [
 
 const ENTITY_PROPERTY_KEYWORDS = ['class'];
 
-const VIEW_NAME_KEYWORDS = [
-  'report','download','upload','gw','gateway','getCustomConfig','getCurrentIp',
-  'config','tenantExpiration',
-];
-
-const FRONTEND_PATH_KEYWORDS = [
-  'api','rest','system','getCustomConfig','proxy','upload','gateway','config',
-  'getCurrentIp','gw','report','download','tenantExpiration',
-];
-
 const KEYWORDS_MAP = {
   common: new Set(COMMON_KEYWORDS),
   entityName: new Set([...COMMON_KEYWORDS, ...ENTITY_NAME_KEYWORDS]),
   enumName: new Set(COMMON_KEYWORDS),
-  structureName: new Set(COMMON_KEYWORDS),
   entityProperty: new Set([...COMMON_KEYWORDS, ...ENTITY_PROPERTY_KEYWORDS]),
-  enumItem: new Set(COMMON_KEYWORDS),
-  structureProperty: new Set([]),
-  viewName: new Set([...COMMON_KEYWORDS, ...VIEW_NAME_KEYWORDS]),
-  frontendPath: new Set([...COMMON_KEYWORDS, ...FRONTEND_PATH_KEYWORDS]),
   strict: new Set([
     ...COMMON_KEYWORDS, ...ENTITY_NAME_KEYWORDS, ...ENTITY_PROPERTY_KEYWORDS,
-    ...VIEW_NAME_KEYWORDS, ...FRONTEND_PATH_KEYWORDS,
   ]),
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Check a single name against a keyword type, return conflicting words */
 function checkName(name, type = 'entityName') {
   const keywords = KEYWORDS_MAP[type];
   if (!keywords) {
@@ -182,96 +167,90 @@ function checkName(name, type = 'entityName') {
   return [];
 }
 
-/** Extract candidate names from a markdown file (titles, entity names from filenames) */
-function extractNamesFromFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    console.error(`Warning: File not found: ${filePath}`);
-    return [];
-  }
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const names = [];
+/** Extract entity name from .ts file: export class EntityName */
+function extractEntityNameFromTs(content) {
+  const m = content.match(/export\s+class\s+([A-Za-z_][A-Za-z0-9_]*)/);
+  return m ? m[1] : null;
+}
 
-  // Extract names from markdown headings: # 标题（EnglishName）
-  const headingEn = /[#\-*]+\s*[^\n]*[（(]([A-Za-z][A-Za-z0-9_]*)[）)]/g;
-  let m;
-  while ((m = headingEn.exec(content)) !== null) {
-    names.push(m[1]);
-  }
+/** Extract enum name from .ts file: export class EnumName extends BaseEnum */
+function extractEnumNameFromTs(content) {
+  const m = content.match(/export\s+class\s+([A-Za-z_][A-Za-z0-9_]*)\s+extends\s+BaseEnum/);
+  return m ? m[1] : null;
+}
 
-  // Extract entity/view names from Chinese+English hybrid filenames like 权限中心-实体-用户（LcapUser）.md
-  const baseName = path.basename(filePath);
-  const chineseNameMatch = baseName.match(/[（(]([A-Za-z][A-Za-z0-9_]*)[）)]\.md$/);
-  if (chineseNameMatch) {
-    names.push(chineseNameMatch[1]);
+/** Scan a directory for .ts files and extract entity/enum names */
+function scanDirectory(dirPath) {
+  const results = [];
+  if (!fs.existsSync(dirPath)) {
+    console.error(`Warning: Directory not found: ${dirPath}`);
+    return results;
   }
-
-  // Also support legacy kebab-case filenames like entity-Customer.md
-  const legacyNameMatch = baseName.match(/^(entity|view|logic|enum)-([^.]+)\.md$/);
-  if (legacyNameMatch) {
-    names.push(legacyNameMatch[2]);
-  }
-
-  // Extract names from table cells (first column often has entity/field names)
-  const tableCell = /\|\s*([A-Z][A-Za-z0-9]*)\s*\|/g;
-  while ((m = tableCell.exec(content)) !== null) {
-    if (m[1].length > 1 && !m[1].startsWith('The')) {
-      names.push(m[1]);
+  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.ts'));
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(dirPath, file), 'utf-8');
+    const entityName = extractEntityNameFromTs(content);
+    if (entityName) {
+      const isEnum = content.includes('extends BaseEnum');
+      results.push({ name: entityName, type: isEnum ? 'enumName' : 'entityName', source: file });
     }
   }
-
-  return [...new Set(names)];
+  return results;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 let type = 'entityName';
+let scanDir = null;
 const inputs = [];
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--type' && args[i + 1]) {
     type = args[++i];
+  } else if (args[i] === '--dir' && args[i + 1]) {
+    scanDir = args[++i];
   } else {
     inputs.push(args[i]);
   }
 }
 
-if (inputs.length === 0) {
-  console.log('Usage: node check-naslnames.mjs [--type <type>] <name-or-file> [name-or-file] ...');
+if (inputs.length === 0 && !scanDir) {
+  console.log('Usage: node check-naslnames.mjs [--type <type>] <name> [name] ...');
+  console.log('       node check-naslnames.mjs --dir cwspec/');
   console.log('');
-  console.log('Types: common, entityName, viewName, enumName, structureName,');
-  console.log('       entityProperty, enumItem, structureProperty, frontendPath, strict');
-  console.log('');
-  console.log('Examples:');
-  console.log('  node check-naslnames.mjs Order');
-  console.log('  node check-naslnames.mjs --type viewName Report');
-  console.log('  node check-naslnames.mjs plan/data-model/客户管理-实体-客户（Customer）.md');
+  console.log('Types: common, entityName, enumName, entityProperty, strict');
   process.exit(0);
 }
 
 const allNames = [];
 const conflicts = [];
 
+// Scan directory if specified
+if (scanDir) {
+  const scanned = scanDirectory(scanDir);
+  for (const { name, type: detectedType, source } of scanned) {
+    allNames.push({ name, source, type: detectedType });
+  }
+}
+
+// Process individual names
 for (const input of inputs) {
-  // Check if input is a file path
-  if (input.endsWith('.md') || input.includes('/')) {
-    const fileNames = extractNamesFromFile(input);
-    if (fileNames.length === 0) {
-      // If no names extracted, check the filename itself
-      const baseName = path.basename(input).replace(/\.[^.]+$/, '');
-      allNames.push({ name: baseName, source: input });
-    } else {
-      for (const name of fileNames) {
-        allNames.push({ name, source: input });
-      }
+  // If it's a .ts file, extract the name
+  if (input.endsWith('.ts') && fs.existsSync(input)) {
+    const content = fs.readFileSync(input, 'utf-8');
+    const entityName = extractEntityNameFromTs(content);
+    if (entityName) {
+      allNames.push({ name: entityName, source: input });
     }
   } else {
     allNames.push({ name: input, source: 'cli' });
   }
 }
 
-for (const { name, source } of allNames) {
-  const found = checkName(name, type);
+for (const { name, source, type: nameType } of allNames) {
+  const checkType = nameType || type;
+  const found = checkName(name, checkType);
   if (found.length > 0) {
     conflicts.push({ name, found, source });
   }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * code2cwspec initialization script
- * Creates the cwspec/ directory structure for generated documents.
- * Templates are read directly from the plugin directory.
+ * Creates the cwspec/ directory for generated documents.
+ * Flat structure: all .ts and .md files go directly in cwspec/.
  *
  * Usage: node init-cwspec.mjs [--json]
  */
@@ -14,19 +14,15 @@ const jsonMode = process.argv.includes("--json");
 
 // --- Fixed output directory ---
 const OUTPUT_DIR = "cwspec";
-const REQUIREMENTS_DIR = "cwspec/requirements";
-const PLAN_DIR = "cwspec/plan";
 
-// Create directories
-for (const dir of [OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR]) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+// Create directory
+if (!fs.existsSync(OUTPUT_DIR)) {
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
 // --- Output ---
 if (jsonMode) {
-  console.log(JSON.stringify({ OUTPUT_DIR, REQUIREMENTS_DIR, PLAN_DIR }));
+  console.log(JSON.stringify({ OUTPUT_DIR }));
 } else {
   console.log(`Output: ${OUTPUT_DIR}`);
 }
