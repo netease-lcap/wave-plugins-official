@@ -6,17 +6,6 @@ description: 使用 Wiki 上下文和源文件引用询问有关仓库的问题
 
 回答有关此仓库的问题，并以实际源代码为依据。
 
-## 源码仓库解析（必须首先执行）
-
-在回答之前，解析源码仓库上下文：
-
-1. **检查 git remote**：运行 `git remote get-url origin`
-2. **询问用户**：_"这是一个仅限本地的仓库，还是你有源码仓库 URL？"_
-   - 远程 URL → 存储为 `REPO_URL`，使用链接引用：`[文件:行号](REPO_URL/blob/BRANCH/文件#L行号)`
-   - 本地 → 使用 `(文件路径:行号)`
-3. **确定默认分支**：运行 `git rev-parse --abbrev-ref HEAD`
-4. **在解析之前，不要继续**
-
 ## 问题
 
 $ARGUMENTS
@@ -41,7 +30,7 @@ $ARGUMENTS
 ### 关键文件
 | 文件 | 用途 | 源码 |
 |------|---------|--------|
-| `src/path/file.ts` | [在系统中的角色] | [链接引用] |
+| `src/path/file.ts` | [在系统中的角色] | (src/path/file.ts:行号) |
 
 ### 代码示例
 <!-- Source: 文件路径:行号 -->
@@ -55,8 +44,6 @@ $ARGUMENTS
 
 - 仅使用此仓库中实际源文件的信息
 - 绝不虚构、猜测或使用外部知识
-- 始终使用解析后的引用格式行内引用源文件：
-  - **远程**：`[src/path/file.ts:42](REPO_URL/blob/BRANCH/src/path/file.ts#L42)`
-  - **本地**：`(src/path/file.ts:42)`
+- 始终使用本地引用格式行内引用源文件：`(src/path/file.ts:42)`
 - 逐步思考复杂问题
 - 如果信息不足，请明确说明并建议检查哪些文件

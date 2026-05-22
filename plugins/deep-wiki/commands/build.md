@@ -89,7 +89,7 @@ graph LR
 
 | File | Purpose | Source |
 |------|---------|--------|
-| `src/main.ts` | 应用入口 | [src/main.ts:1](REPO_URL/blob/BRANCH/src/main.ts#L1) |
+| `src/main.ts` | 应用入口 | (src/main.ts:1) |
 | ... | ... | ... |
 
 ## Tech Stack

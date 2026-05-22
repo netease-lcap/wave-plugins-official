@@ -6,17 +6,6 @@ description: 为 Wiki 生成 llms.txt 和 llms-full.txt 文件 — 遵循 llms.t
 
 生成遵循 [llms.txt 规范](https://llmstxt.org/) 的 `llms.txt` 和 `llms-full.txt` 文件，为 Wiki 文档提供 LLM 友好的访问方式。
 
-## 源码仓库解析（必须首先执行）
-
-在生成之前，解析源码仓库上下文：
-
-1. **检查 git remote**：运行 `git remote get-url origin`
-2. **询问用户**：_"这是一个仅限本地的仓库，还是你有源码仓库 URL？"_
-   - 远程 URL → 存储为 `REPO_URL`，使用链接引用：`[标题](REPO_URL/blob/BRANCH/path)`
-   - 本地 → 使用 wiki 相对路径
-3. **确定默认分支**：运行 `git rev-parse --abbrev-ref HEAD`
-4. **在解析之前，不要继续**
-
 ## 什么是 llms.txt
 
 `llms.txt` 是一个标准化 Markdown 文件，帮助 LLM 快速理解项目。它提供：
@@ -147,7 +136,7 @@ description: 为 Wiki 生成 llms.txt 和 llms-full.txt 文件 — 遵循 llms.t
 3. **每个 `<doc>` 标签** 有 `title` 和 `path` 属性
 4. **去除 VitePress frontmatter**（YAML `---` 块）从内联内容中
 5. **保留 Mermaid 图表** — 按原样保留在 `<doc>` 块中
-6. **保留引用** — 所有 `[file:line](URL)` 链接保持原样
+6. **保留引用** — 所有本地引用格式保持原样
 7. **保留表格** — 所有 Markdown 表格保持原样
 8. **与 `llms.txt` 相同的分节顺序**
 9. **"Optional" 分节** — 仍然存在，但读者/工具可以跳过以节省上下文
@@ -187,7 +176,7 @@ wiki/
 报告摘要：
 
 ```
-## llms.txt 生成报告 ✅
+## llms.txt 生成报告
 
 - `./llms.txt` — 根级发现文件，{N} 个分节，{M} 个链接页面
 - `wiki/llms.txt` — {N} 个分节，{M} 个链接页面，{size} KB
