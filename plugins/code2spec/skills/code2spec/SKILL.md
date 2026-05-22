@@ -1,6 +1,6 @@
 ---
 name: code2spec
-description: 分析代码仓库，自动识别功能模块并生成编号规格说明文档。多智能体架构：研究→规划→写作→验证。
+description: 分析代码仓库，自动识别功能模块并生成编号规格说明文档。多智能体架构：研究→规划→写作。
 disable-model-invocation: true
 allowed-tools:
   - Bash(node */init-specs.mjs*)
@@ -72,7 +72,6 @@ node ${WAVE_PLUGIN_ROOT}/scripts/init-specs.mjs --add-specs '<JSON 数组>'
 ### Step 4: 规格撰写者生成文档
 
 为每个规格启动一个 `spec-writer` 子智能体，传入上下文：
-- 模式: 批量生成
 - 规格编号: ###
 - 短名称: xxx
 - specFile 路径
@@ -83,29 +82,8 @@ node ${WAVE_PLUGIN_ROOT}/scripts/init-specs.mjs --add-specs '<JSON 数组>'
 
 **并行策略**：独立的规格（dependsOn 为空）可以并行生成，将多个 spec-writer 子智能体放在同一个 tool_calls 块中启动（不使用 `run_in_background`）。有依赖关系的规格串行执行。
 
-### Step 5: 验证员检查质量
-
-启动子智能体 `spec-validator`，传入上下文：
-- generation-manifest.json 路径
-- 所有规格目录列表
-
-等待完成，确认 `specs/.state/validation-summary.md` 已生成。
-
-### Step 6: 修复循环（最多 2 轮）
-
-1. 读取 `specs/.state/validation-summary.md`
-2. 如果存在失败项且未超过 2 轮修复：
-   - 启动 `spec-writer` 子智能体（修复模式），传入上下文：
-     - 模式: 修复验证问题
-     - 验证摘要中的具体问题列表
-     - 需要修改的 spec.md 路径
-   - 修复完成后，重新执行 Step 5
-3. 如果所有项通过或已达到 2 轮上限，继续下一步
-
-### Step 7: 报告完成
+### Step 5: 报告完成
 
 向用户报告：
 - 生成的规格数量和列表
 - 每个规格的路径和标题
-- 验证结果摘要（通过/失败项数）
-- 如有未解决的问题，列出具体问题
