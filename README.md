@@ -7,7 +7,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | 插件 | 描述 |
 |------|------|
 | **code2cwspec** | 从现有代码逆向生成为 CodeWave 格式的 spec.md + menus.md + TypeScript 实体/枚举声明文件 |
-| **code2spec** | 从代码生成规格说明的工具集，用于创建和管理技术规格文档 |
+| **code2spec** | 分析代码仓库，自动识别功能模块并生成编号规格说明文档（多智能体架构） |
 | **commit-skills** | 简化的 Git 工作流技能，支持提交、推送和创建 Pull Request |
 | **deep-wiki** | AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南和 llms.txt |
 | **document-skills** | 文档处理套件，包含 Excel、Word、PowerPoint 和 PDF 处理能力 |
