@@ -5,6 +5,8 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(node */init-specs.mjs*)
   - Bash(mkdir*)
+  - Write(specs/**)
+  - Edit(specs/**)
 ---
 
 ## 用户输入
