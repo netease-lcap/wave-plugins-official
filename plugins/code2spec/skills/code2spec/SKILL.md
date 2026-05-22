@@ -81,7 +81,7 @@ node ${WAVE_PLUGIN_ROOT}/scripts/init-specs.mjs --add-specs '<JSON 数组>'
 - 架构计划路径: `specs/.state/architecture-plan.md`
 - 研究报告路径: `specs/.state/research-report.md`
 
-**并行策略**：独立的规格（dependsOn 为空）可以并行生成，将多个 spec-writer 子智能体放在同一个 tool_calls 块中启动（`run_in_background: true`）。有依赖关系的规格串行执行。
+**并行策略**：独立的规格（dependsOn 为空）可以并行生成，将多个 spec-writer 子智能体放在同一个 tool_calls 块中启动（不使用 `run_in_background`）。有依赖关系的规格串行执行。
 
 ### Step 5: 验证员检查质量
 
