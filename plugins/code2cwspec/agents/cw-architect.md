@@ -33,33 +33,36 @@ cwspec/
 
 ## generation-manifest.json 格式
 
+按文档类别分组，每个类别为文件名数组（路径相对于 `cwspec/`，不含 `cwspec/` 前缀）：
+
 ```json
 {
-  "phases": [
-    {
-      "phase": "requirements",
-      "documents": [
-        { "path": "spec.md", "template": "spec-template.md", "inputs": ["research-report.md"], "dependsOn": [] },
-        { "path": "menus.md", "template": "menus-template.md", "inputs": ["research-report.md"], "dependsOn": [] }
-      ]
-    },
-    {
-      "phase": "enums",
-      "documents": [
-        { "path": "app.enums.CustomerStatus.ts", "template": "enum-template.ts", "inputs": ["research-report.md"], "dependsOn": ["spec.md"] },
-        { "path": "app.enums.YesNo.ts", "template": "enum-template.ts", "inputs": ["research-report.md"], "dependsOn": ["spec.md"] }
-      ]
-    },
-    {
-      "phase": "entities",
-      "documents": [
-        { "path": "app.dataSources.defaultDS.entities.Customer.ts", "template": "entity-template.ts", "inputs": ["research-report.md"], "dependsOn": ["spec.md", "app.enums.CustomerStatus.ts"] },
-        { "path": "app.dataSources.defaultDS.entities.LcapUser.ts", "template": "entity-template.ts", "inputs": ["research-report.md"], "dependsOn": ["spec.md", "app.enums.UserStatusEnum.ts"] }
-      ]
-    }
+  "spec": ["spec.md"],
+  "menus": ["menus.md"],
+  "enums": [
+    "app.enums.YesNo.ts",
+    "app.enums.CustomerStatus.ts"
+  ],
+  "entities": [
+    "app.dataSources.defaultDS.entities.LcapUser.ts",
+    "app.dataSources.defaultDS.entities.Customer.ts"
   ]
 }
 ```
+
+## 输出自检
+
+生成 `generation-manifest.json` 后，运行以下命令校验：
+
+```bash
+node ${WAVE_PLUGIN_ROOT}/scripts/check-manifest.mjs cwspec/
+```
+
+校验内容：
+- JSON 格式合法
+- 所有文件路径不含 `cwspec/` 前缀
+
+**校验失败则修正 manifest 后重新校验，直到通过。**
 
 ## 关键规则
 

@@ -3,10 +3,7 @@ name: code2cwspec
 description: 全量分析现有代码仓库，逆向生成为 Codewave (LCAP) 规范模板，输出 spec.md + menus.md + TypeScript 实体/枚举文件。
 disable-model-invocation: true
 allowed-tools:
-  - Bash(node */init-cwspec.mjs*)
-  - Bash(node */check-naslnames.mjs*)
-  - Bash(node */check-menus.mjs*)
-  - Bash(node */check-crossrefs.mjs*)
+  - Bash(node */code2cwspec/scripts/*.mjs*)
 
 ---
 
