@@ -50,11 +50,6 @@
       "source": "./plugins/tavily-search"
     },
     {
-      "name": "lcap-extension-component",
-      "description": "LCAP 扩展组件技能",
-      "source": "./plugins/lcap-extension-component"
-    },
-    {
       "name": "frontend-design",
       "description": "创建独特的、生产级前端界面，避免千篇一律的 AI 审美",
       "source": "./plugins/frontend-design"
