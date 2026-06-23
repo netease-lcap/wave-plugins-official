@@ -60,7 +60,13 @@ node ${WAVE_PLUGIN_ROOT}/scripts/check-manifest.mjs cwspec/
 
 校验内容：
 - JSON 格式合法
-- 所有文件路径不含 `cwspec/` 前缀
+- 顶层 key 只允许 `spec`、`menus`、`enums`、`entities`
+- `spec` 组必须恰好为 `["spec.md"]`
+- `menus` 组必须恰好为 `["menus.md"]`
+- `enums` 文件匹配 `app.enums.<Name>.ts`
+- `entities` 文件匹配 `app.dataSources.defaultDS.entities.<Name>.ts`
+- 所有路径不含 `cwspec/` 前缀
+- 无重复文件路径
 
 **校验失败则修正 manifest 后重新校验，直到通过。**
 
