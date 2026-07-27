@@ -55,6 +55,11 @@
       "source": "./plugins/frontend-design"
     },
     {
+      "name": "brainstorming",
+      "description": "在开始任何创造性工作前，通过协作对话把想法打磨成完整的设计与规格说明，含基于浏览器的视觉伴侣用于 mockup 展示与对比",
+      "source": "./plugins/brainstorming"
+    },
+    {
       "name": "superpowers",
       "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
       "source": "https://github.com/obra/superpowers.git"

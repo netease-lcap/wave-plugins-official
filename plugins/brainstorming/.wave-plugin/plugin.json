@@ -1,0 +1,8 @@
+{
+  "name": "brainstorming",
+  "description": "实现前的设计探索技能：通过结构化提问与多方案探索把想法变成成型设计，并自带浏览器视觉原型伴侣，可在写代码前低成本验证布局与方向。改自 obra/superpowers。",
+  "version": "1.0.0",
+  "author": {
+    "name": "Wave Team"
+  }
+}
