@@ -28,6 +28,13 @@ Watch the current PR checks and merge it with rebase once they pass.
    f. Commit and push: `git add -A && git commit && git push` (use interactive commit for a meaningful message)
    g. Go back to step 1 to re-watch
 3. Once all checks pass, merge: `gh pr merge --rebase` (do NOT add --delete-branch, it fails in worktrees)
+4. After the merge succeeds, sync the local repository:
+   - If inside a worktree (i.e. `git rev-parse --git-dir` differs from `git rev-parse --git-common-dir`), pull the main repo:
+     `git -C "$(git rev-parse --git-common-dir)/.." pull`
+   - Otherwise, switch to the default branch, delete the merged branch, and pull:
+     `git switch <default-branch> && git branch -D <current-branch> && git pull`
+     - Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip the `origin/` prefix; fall back to `main`)
+     - Current/merged branch is the PR head ref from Context above
 
 IMPORTANT: Sequential bash commands that depend on each other (e.g., `gh pr checks --watch` → `gh pr merge --rebase`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call.
 
