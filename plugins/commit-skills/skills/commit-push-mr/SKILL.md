@@ -17,7 +17,6 @@ allowed-tools:
 ## Context
 
 - Current git status: !`git status`
-- Current git diff (staged and unstaged changes): !`git diff HEAD`
 - Current branch: !`git branch --show-current`
 - Commit messages diff with main: !`git log main..HEAD --oneline`
 - `glab mr view --output json 2>/dev/null || true`: !`glab mr view --output json 2>/dev/null || true`
