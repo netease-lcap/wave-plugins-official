@@ -7,6 +7,15 @@ allowed-tools:
   - Bash(gh pr merge*)
   - Bash(gh run list*)
   - Bash(gh run view*)
+  - Bash(git add*)
+  - Bash(git commit*)
+  - Bash(git push*)
+  - Bash(git rev-parse*)
+  - Bash(git symbolic-ref*)
+  - Bash(git -C*)
+  - Bash(git switch*)
+  - Bash(git branch -D*)
+  - Bash(git pull*)
 ---
 
 ## Context
