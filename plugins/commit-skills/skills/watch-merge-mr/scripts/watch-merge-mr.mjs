@@ -1,49 +1,85 @@
 import { execSync } from 'child_process';
 
 const mrId = process.argv[2] || '';
+const POLL_INTERVAL_MS = 10000;
+const MAX_CONSECUTIVE_ERRORS = 5;
+
+function run(command) {
+  return execSync(command, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
 
 async function watchAndMerge() {
   console.log(`Starting MR watch${mrId ? ` for MR !${mrId}` : ''}...`);
+  let consecutiveErrors = 0;
+
   while (true) {
-    let status = null;
     try {
-      const output = execSync(`glab mr view ${mrId} --output json`, { encoding: 'utf8' });
-      const data = JSON.parse(output);
-      status = data.pipeline?.status;
-    } catch (error) {
-      console.error('Error fetching MR status:', error.message);
-    }
+      // Resolve the MR's project and iid via `glab mr view`. Note that the
+      // MR view object has no reliable top-level `pipeline` field (missing on
+      // some GitLab CE versions), so pipeline status is queried explicitly
+      // through the pipelines API below instead.
+      const view = JSON.parse(run(`glab mr view ${mrId} --output json`));
+      const projectId = view.project_id;
+      const resolvedIid = view.iid;
 
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`${timestamp} - Pipeline: ${status}`);
+      // Query the MR ref pipelines (refs/merge-requests/<iid>/head).
+      const pipelines = JSON.parse(
+        run(`glab api projects/${projectId}/merge_requests/${resolvedIid}/pipelines`)
+      );
+      consecutiveErrors = 0;
 
-    if (status === 'success' || status === undefined || status === null) {
-      try {
-        if (status === undefined || status === null) {
-          console.log('No pipeline found, merging MR directly...');
-        } else {
-          console.log('Pipeline success! Merging MR...');
-        }
-        execSync(`glab mr merge ${mrId} --yes --remove-source-branch`, { stdio: 'inherit' });
-        syncLocalRepo();
-        break;
-      } catch (error) {
-        console.error('Error merging MR:', error.message);
-        break;
+      const timestamp = new Date().toLocaleTimeString();
+
+      if (pipelines.length === 0) {
+        // No pipeline configured for this MR, merge directly.
+        console.log(`${timestamp} - No pipeline found, merging MR directly...`);
+        mergeAndSync(resolvedIid);
+        return;
       }
-    } else if (status === 'failed' || status === 'canceled') {
-      console.log('Pipeline failed or canceled, aborting merge.');
-      break;
+
+      // Take the latest pipeline (highest id).
+      const status = pipelines.sort((a, b) => b.id - a.id)[0].status;
+      console.log(`${timestamp} - Pipeline: ${status}`);
+
+      if (status === 'success') {
+        console.log('Pipeline success! Merging MR...');
+        mergeAndSync(resolvedIid);
+        return;
+      }
+      if (status === 'failed' || status === 'canceled') {
+        console.log(`Pipeline ${status}, aborting merge.`);
+        process.exit(1);
+      }
+      // running / pending / created / manual / ... keep polling.
+    } catch (error) {
+      consecutiveErrors += 1;
+      console.error(
+        `Error querying MR status (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`,
+        error.message
+      );
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        console.error('Too many consecutive query errors, aborting.');
+        process.exit(1);
+      }
     }
 
-    // Wait for 10 seconds
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
   }
+}
+
+function mergeAndSync(mrIid) {
+  try {
+    execSync(`glab mr merge ${mrIid} --yes --remove-source-branch`, { stdio: 'inherit' });
+  } catch (error) {
+    console.error('Error merging MR:', error.message);
+    process.exit(1);
+  }
+  syncLocalRepo();
 }
 
 // Sync local repo after a successful merge.
 // - In a worktree: pull the main repository.
-// - Otherwise: delete the current branch, switch to the default branch, and pull.
+// - Otherwise: delete the current branch, switch to the default branch, pull.
 function syncLocalRepo() {
   console.log('Syncing local repository...');
   try {
@@ -66,4 +102,9 @@ function syncLocalRepo() {
   }
 }
 
-watchAndMerge();
+try {
+  await watchAndMerge();
+} catch (error) {
+  console.error('Unexpected error:', error.message);
+  process.exit(1);
+}
