@@ -35,11 +35,6 @@
       "source": "./plugins/commit-skills"
     },
     {
-      "name": "speckit",
-      "description": "规范驱动开发工具包（中文版）- 用于软件工程任务的规格说明与规划。",
-      "source": "./plugins/speckit"
-    },
-    {
       "name": "deep-wiki",
       "description": "AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南、AGENTS.md 和 llms.txt",
       "source": "./plugins/deep-wiki"

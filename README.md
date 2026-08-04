@@ -12,7 +12,6 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **deep-wiki** | AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南和 llms.txt |
 | **document-skills** | 文档处理套件，包含 Excel、Word、PowerPoint 和 PDF 处理能力 |
 | **frontend-design** | 创建独特的、生产级前端界面，避免千篇一律的 AI 审美 |
-| **speckit** | 规范驱动开发工具包（中文版），用于软件工程任务的规格说明与规划 |
 | **superpowers** | AI 编程助手核心技能库：TDD、调试、协作模式和成熟技巧 |
 | **tavily-search** | Tavily AI 驱动的搜索引擎 MCP 服务器，提供网络搜索能力 |
 | **typescript-lsp** | TypeScript/JavaScript 语言服务器，提供代码智能提示 |
@@ -52,7 +51,6 @@ wave-plugins-official/
 │   ├── deep-wiki/            # Wiki 生成器
 │   ├── document-skills/      # 文档处理套件
 │   ├── frontend-design/      # 前端界面设计
-│   ├── speckit/              # 规范驱动开发工具包
 │   ├── tavily-search/        # AI 搜索引擎
 │   ├── typescript-lsp/       # TypeScript 语言服务器
 │   └── chrome-devtools/      # 浏览器自动化
