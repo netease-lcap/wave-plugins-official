@@ -4,7 +4,7 @@ description: Watch MR pipeline and merge when successful
 disable-model-invocation: true
 allowed-tools:
   - Bash(glab mr view*)
-  - Bash(glab ci status*)
+  - Bash(glab api*)
   - Bash(glab ci get*)
   - Bash(glab ci trace *)
   - Bash(glab mr merge*)
@@ -27,9 +27,15 @@ allowed-tools:
 
 Watch the current MR pipeline and merge it once it succeeds.
 
-1. Watch pipeline: `glab ci status --live` (blocks until the pipeline ends; final line prints `Pipeline state: success` or `Pipeline state: failed`; if no pipeline is configured, it exits immediately)
-2. If the pipeline fails:
-   a. List the latest pipeline's jobs to find the failed job ID: `glab ci get -d`
+1. Watch the pipeline by polling the REST API (do NOT use `glab ci status --live` — it exits immediately with empty output in headless/non-TTY environments):
+   a. From the MR info in Context, read `project_id` and `head_pipeline.id`.
+   b. If `head_pipeline` is missing, look it up explicitly: `glab api "projects/<project_id>/merge_requests/<iid>/pipelines"` — take the highest `id` entry as the pipeline id.
+   c. If no pipeline exists at all, no CI is configured for this MR — skip straight to step 3.
+   d. Poll until the pipeline reaches a terminal state (`success`/`failed`/`canceled`), e.g.:
+      `for i in $(seq 1 60); do st=$(glab api "projects/<project_id>/pipelines/<pipeline_id>" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))"); echo "poll $i: $st"; case "$st" in success|failed|canceled) break;; esac; sleep 10; done`
+      If the loop's final status is still pending/running, run the loop again (long pipelines can outlast a single tool call).
+2. If the pipeline fails or is canceled:
+   a. List the MR head pipeline's jobs to find the failed job ID: `glab ci get --merge-request=<iid> --status=failed --with-job-details` (or `-p <pipeline_id>`)
    b. Download the failed job log to a temp file (single network request, reusable for analysis):
       `glab ci trace <failed-job-id> > /tmp/glab-failed-log.txt 2>&1`
    c. Use the Grep tool to search `/tmp/glab-failed-log.txt` for failure indicators (pattern: `FAIL|Error|failed|exit code`, case-insensitive)
@@ -46,6 +52,6 @@ Watch the current MR pipeline and merge it once it succeeds.
      - Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip the `origin/` prefix; fall back to `main`)
      - Source/merged branch is the MR source_branch from Context above
 
-IMPORTANT: Sequential bash commands that depend on each other (e.g., `glab ci status --live` → `glab mr merge --yes`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call.
+IMPORTANT: Sequential bash commands that depend on each other (e.g., pipeline polling → `glab mr merge --yes`) MUST NOT be called as separate parallel tool calls in one response. Instead, chain them with `&&` in a single Bash tool call.
 
 Execute the commands. For log analysis (step 2c-d), use the Grep and Read tools on the downloaded log file. Do not send any other text or messages besides these tool calls.
