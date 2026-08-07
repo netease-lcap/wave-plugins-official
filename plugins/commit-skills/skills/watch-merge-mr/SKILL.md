@@ -27,7 +27,7 @@ allowed-tools:
 
 Watch the current MR pipeline and merge it once it succeeds.
 
-1. Watch the pipeline by polling the REST API (do NOT use `glab ci status --live` — it exits immediately with empty output in headless/non-TTY environments):
+1. Watch the pipeline by polling the REST API (do NOT use `glab ci status --live` — its TUI redraws every 3s with ANSI cursor sequences, flooding captured output with noise; REST polling yields one clean status line per poll):
    a. From the MR info in Context, read `project_id` and `head_pipeline.id`.
    b. If `head_pipeline` is missing, look it up explicitly: `glab api "projects/<project_id>/merge_requests/<iid>/pipelines"` — take the highest `id` entry as the pipeline id.
    c. If no pipeline exists at all, no CI is configured for this MR — skip straight to step 3.
