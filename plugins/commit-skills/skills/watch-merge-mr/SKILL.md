@@ -28,12 +28,13 @@ allowed-tools:
 Watch the current MR pipeline and merge it once it succeeds.
 
 1. Watch the pipeline by polling the REST API (do NOT use `glab ci status --live` — its TUI redraws every 3s with ANSI cursor sequences, flooding captured output with noise; REST polling yields one clean status line per poll):
-   a. From the MR info in Context, read `project_id` and `head_pipeline.id`.
-   b. If `head_pipeline` is missing, look it up explicitly: `glab api "projects/<project_id>/merge_requests/<iid>/pipelines"` — take the highest `id` entry as the pipeline id.
+   a. Get the head pipeline from the MR REST API (do NOT rely on the `glab mr view` output in Context — it exposes no reliable `head_pipeline` field on GitLab CE):
+      `glab api "projects/<project_id>/merge_requests/<iid>"` — read `head_pipeline.id`.
+   b. If `head_pipeline` is null, look it up explicitly: `glab api "projects/<project_id>/merge_requests/<iid>/pipelines"` — take the highest `id` entry as the pipeline id.
    c. If no pipeline exists at all, no CI is configured for this MR — skip straight to step 3.
    d. Poll until the pipeline reaches a terminal state (`success`/`failed`/`canceled`), e.g.:
       `for i in $(seq 1 60); do st=$(glab api "projects/<project_id>/pipelines/<pipeline_id>" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))"); echo "poll $i: $st"; case "$st" in success|failed|canceled) break;; esac; sleep 10; done`
-      If the loop's final status is still pending/running, run the loop again (long pipelines can outlast a single tool call).
+      If the loop's final status is still non-terminal (created/pending/running), run the loop again (long pipelines can outlast a single tool call).
 2. If the pipeline fails or is canceled:
    a. List the MR head pipeline's jobs to find the failed job ID: `glab ci get --merge-request=<iid> --status=failed --with-job-details` (or `-p <pipeline_id>`)
    b. Download the failed job log to a temp file (single network request, reusable for analysis):
