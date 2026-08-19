@@ -20,7 +20,7 @@ allowed-tools:
 - Current git status: !`git status`
 - Current branch: !`git branch --show-current`
 - Commit messages diff with main: !`git log main..HEAD --oneline`
-- `gh pr view --json number 2>/dev/null || true`: !`gh pr view --json number 2>/dev/null || true`
+- `gh pr view --json number 2>&1 || echo none`: !`gh pr view --json number 2>&1 || echo none`
 
 ## Your task
 

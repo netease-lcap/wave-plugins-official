@@ -20,7 +20,7 @@ allowed-tools:
 
 ## Context
 
-- PR info: !`gh pr view --json headRefName,state --jq '{branch: .headRefName, state: .state}' 2>/dev/null || echo '{}'`
+- PR info: !`gh pr view --json headRefName,state 2>&1 || echo {}`
 
 ## Your task
 
@@ -30,8 +30,8 @@ Watch the current PR checks and merge it with rebase once they pass.
 2. If any check fails:
    a. Get the failed run ID: `gh run list --status failure -L 1 --json databaseId --jq '.[0].databaseId'`
    b. Download the failed log to a temp file (single network request, reusable for analysis):
-      `gh run view <run-id> --log-failed > /tmp/gh-failed-log.txt 2>&1`
-   c. Use the Grep tool to search `/tmp/gh-failed-log.txt` for failure indicators (pattern: `FAIL|Error|failed|ELIFECYCLE|exit code`, case-insensitive)
+      `gh run view <run-id> --log-failed > /tmp/gh-failed-log.txt 2>&1; echo "log at: $(cygpath -w /tmp/gh-failed-log.txt 2>/dev/null || echo /tmp/gh-failed-log.txt)"`
+   c. Use the Grep tool to search the log path printed above (native Windows path on Windows, e.g. `C:\Users\...\Temp\gh-failed-log.txt`) for failure indicators (pattern: `FAIL|Error|failed|ELIFECYCLE|exit code`, case-insensitive)
    d. If more context is needed, use the Grep tool with context lines (`-C 5`) on the same file
    e. Fix the issue in the codebase
    f. Commit and push: `git add -A && git commit && git push` (use interactive commit for a meaningful message)

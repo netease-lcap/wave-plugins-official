@@ -19,7 +19,7 @@ allowed-tools:
 - Current git status: !`git status`
 - Current branch: !`git branch --show-current`
 - Commit messages diff with main: !`git log main..HEAD --oneline`
-- `glab mr view --output json 2>/dev/null || true`: !`glab mr view --output json 2>/dev/null || true`
+- `glab mr view --output json 2>&1 || echo none`: !`glab mr view --output json 2>&1 || echo none`
 
 ## Your task
 
