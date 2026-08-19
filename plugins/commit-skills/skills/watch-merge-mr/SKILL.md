@@ -21,7 +21,7 @@ allowed-tools:
 
 ## Context
 
-- MR info: !`glab mr view --output json 2>/dev/null || echo '{}'`
+- MR info: !`glab mr view --output json 2>&1 || echo {}`
 
 ## Your task
 
@@ -38,8 +38,8 @@ Watch the current MR pipeline and merge it once it succeeds.
 2. If the pipeline fails or is canceled:
    a. List the MR head pipeline's jobs to find the failed job ID: `glab ci get --merge-request=<iid> --status=failed --with-job-details` (or `-p <pipeline_id>`)
    b. Download the failed job log to a temp file (single network request, reusable for analysis):
-      `glab ci trace <failed-job-id> > /tmp/glab-failed-log.txt 2>&1`
-   c. Use the Grep tool to search `/tmp/glab-failed-log.txt` for failure indicators (pattern: `FAIL|Error|failed|exit code`, case-insensitive)
+      `glab ci trace <failed-job-id> > /tmp/glab-failed-log.txt 2>&1; echo "log at: $(cygpath -w /tmp/glab-failed-log.txt 2>/dev/null || echo /tmp/glab-failed-log.txt)"`
+   c. Use the Grep tool to search the log path printed above (native Windows path on Windows, e.g. `C:\Users\...\Temp\glab-failed-log.txt`) for failure indicators (pattern: `FAIL|Error|failed|exit code`, case-insensitive)
    d. If more context is needed, use the Grep tool with context lines (`-C 5`) on the same file
    e. Fix the issue in the codebase
    f. Commit and push: `git add -A && git commit && git push` (use interactive commit for a meaningful message)
