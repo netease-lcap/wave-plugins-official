@@ -48,11 +48,6 @@
       "name": "frontend-design",
       "description": "创建独特的、生产级前端界面，避免千篇一律的 AI 审美",
       "source": "./plugins/frontend-design"
-    },
-    {
-      "name": "superpowers",
-      "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
-      "source": "https://github.com/obra/superpowers.git"
     }
   ]
 }
