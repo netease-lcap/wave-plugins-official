@@ -53,6 +53,11 @@
       "name": "playwright",
       "description": "Browser automation and end-to-end testing MCP server by Microsoft. Enables the agent to interact with web pages, take screenshots, fill forms, click elements, and perform automated browser testing workflows.",
       "source": "./plugins/playwright"
+    },
+    {
+      "name": "superpowers",
+      "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
+      "source": "https://github.com/obra/superpowers.git"
     }
   ]
 }
