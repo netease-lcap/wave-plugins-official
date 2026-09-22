@@ -13,6 +13,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **document-skills** | 文档处理套件，包含 Excel、Word、PowerPoint 和 PDF 处理能力 |
 | **frontend-design** | 创建独特的、生产级前端界面，避免千篇一律的 AI 审美 |
 | **playwright** | 微软的 Playwright MCP 服务器，提供浏览器自动化与端到端测试能力（截图、填表、点击、交互网页） |
+| **superpowers** | AI 编程助手核心技能库：TDD、调试、协作模式和成熟技巧 |
 | **tavily** | Tavily 官方 skills 集（search / extract / map / crawl / research），依赖本机 `tvly` CLI；来源为上游仓库 [tavily-ai/skills](https://github.com/tavily-ai/skills) |
 | **typescript-lsp** | TypeScript/JavaScript 语言服务器，提供代码智能提示 |
 | **chrome-devtools** | Chrome DevTools Protocol MCP 服务器，用于浏览器自动化 |
