@@ -22,6 +22,13 @@ To make a plugin visible in the marketplace, it must be explicitly registered in
 }
 ```
 
+Alternatively, `source` may be a full Git URL (`http(s)://` / `git@` / `ssh://`) pointing at an
+external repository — the plugin is then cloned from there at install time and read from its
+`.wave-plugin/plugin.json` (or `.claude-plugin/plugin.json`). This is intentional for `tavily`
+(upstream `tavily-ai/skills`): do not "fix" it back to a `./plugins/...` path, and note that such
+sources need direct Git access, accept only a branch/tag after `#ref` (never a commit sha), and
+show no "latest version" in the plugin market. See README「添加新插件」方式二.
+
 ## Removing a Plugin from Marketplace
 To remove a plugin from the marketplace:
 

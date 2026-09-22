@@ -40,9 +40,9 @@
       "source": "./plugins/deep-wiki"
     },
     {
-      "name": "tavily-search",
-      "description": "Tavily AI-powered search MCP server for web search capabilities",
-      "source": "./plugins/tavily-search"
+      "name": "tavily",
+      "description": "Build AI applications with real-time web data using Tavily's search, extract, crawl, and research APIs.",
+      "source": "https://github.com/tavily-ai/skills.git"
     },
     {
       "name": "frontend-design",
