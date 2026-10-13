@@ -18,7 +18,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **typescript-lsp** | TypeScript/JavaScript 语言服务器，提供代码智能提示 |
 | **chrome-devtools** | Chrome DevTools Protocol MCP 服务器，用于浏览器自动化 |
 | **security-guidance** | 写码过程中的自动代码安全审核：逐次编辑的危险模式比对、回合结束的语义复核、提交推送前的深度复核 |
-| **claude-security** | 按需深度安全扫描：整库 / 聚焦区域 / 分支 diff / 单个提交，多 agent 扫描 + 每条发现独立复核，产出报告与由人拍板的补丁 |
+| **security-audit** | 按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动 / 出补丁；多 agent 扫描 + 每条发现独立复核，产出报告与由人拍板的补丁 |
 
 ## 插件市场管理
 
@@ -79,7 +79,7 @@ wave-plugins-official/
 │   ├── typescript-lsp/       # TypeScript 语言服务器
 │   ├── chrome-devtools/      # 浏览器自动化
 │   ├── security-guidance/    # 写码过程中的自动代码安全审核
-│   └── claude-security/      # 按需深度安全扫描
+│   └── security-audit/       # 按需深度安全审计
 └── AGENTS.md                 # 插件市场管理说明
 ```
 

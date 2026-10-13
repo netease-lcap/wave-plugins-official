@@ -1,5 +1,0 @@
-{
-  "name": "claude-security",
-  "description": "按需深度安全扫描：对整库、聚焦区域、分支 diff 或单个提交做多 agent 扫描，每条发现经独立复核后落盘报告，并可生成由人拍板的补丁",
-  "version": "1.0.0"
-}

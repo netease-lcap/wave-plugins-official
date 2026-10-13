@@ -65,9 +65,9 @@
       "source": "./plugins/security-guidance"
     },
     {
-      "name": "claude-security",
-      "description": "按需深度安全扫描：对整库、聚焦区域、分支 diff 或单个提交做多 agent 扫描，每条发现经独立复核后落盘报告，并可生成由人拍板的补丁",
-      "source": "./plugins/claude-security"
+      "name": "security-audit",
+      "description": "按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动（分支 diff、PR 的 ref 对、单个提交）/ 出补丁；多 agent 扫描 + 每条发现独立复核后落盘报告，补丁由人拍板应用",
+      "source": "./plugins/security-audit"
     }
   ]
 }
