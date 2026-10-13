@@ -118,7 +118,8 @@ function fingerprint(cwd, file) {
 }
 
 /**
- * Load the pattern list: built-in rules plus the user's and the project's own.
+ * Load the pattern list: built-in rules plus the team's own, in three scopes —
+ * user, project, project-local — the same scopes the guidance file has.
  * Custom rules extend the built-in list; they never replace or suppress it.
  */
 function loadPatterns(cwd) {
@@ -126,6 +127,7 @@ function loadPatterns(cwd) {
     path.join(PLUGIN_ROOT, "rules", "dangerous-patterns.json"),
     path.join(os.homedir(), ".wave", "security-guidance-patterns.json"),
     path.join(cwd, ".wave", "security-guidance-patterns.json"),
+    path.join(cwd, ".wave", "security-guidance-patterns.local.json"),
   ];
 
   const patterns = [];

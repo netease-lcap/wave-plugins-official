@@ -20,25 +20,26 @@
 
 ## 自定义规则
 
-两个文件按作用域叠加，**追加而不是替换**内置清单：
+自定义分两类来源：**指引**（给复核者看的文字）与**危险模式**（逐次比对用的正则）。两者都按作用域叠加，**追加而不是替换**内置清单：
 
-| 文件                                        | 作用域 | 内容                                                       |
-| ------------------------------------------- | ------ | ---------------------------------------------------------- |
-| `~/.wave/security-guidance.md`              | 用户   | 本项目的威胁模型与约定（给复核者看的指引）                 |
-| `<repo>/.wave/security-guidance.md`         | 项目   | 同上                                                       |
-| `<repo>/.wave/security-guidance.local.md`   | 个人   | 本地覆盖，建议加入 `.gitignore`                            |
-| `~/.wave/security-guidance-patterns.json`   | 用户   | 自定义危险模式（逐次比对用）                               |
-| `<repo>/.wave/security-guidance-patterns.json` | 项目 | 同上                                                       |
+| 文件                                                 | 作用域 | 内容                                       |
+| ---------------------------------------------------- | ------ | ------------------------------------------ |
+| `~/.wave/security-guidance.md`                       | 用户   | 本项目的威胁模型与约定（给复核者看的指引） |
+| `<repo>/.wave/security-guidance.md`                  | 项目   | 同上                                       |
+| `<repo>/.wave/security-guidance.local.md`            | 个人   | 本地覆盖，建议加入 `.gitignore`            |
+| `~/.wave/security-guidance-patterns.json`            | 用户   | 自定义危险模式（逐次比对用）               |
+| `<repo>/.wave/security-guidance-patterns.json`       | 项目   | 同上                                       |
+| `<repo>/.wave/security-guidance-patterns.local.json` | 个人   | 同上，建议加入 `.gitignore`                |
 
 自定义模式的格式（`id` / `name` / `regex` / `message` / `suggestion` / 可选 `files` 限定生效的文件）与内置清单一致，见 [`rules/dangerous-patterns.json`](./rules/dangerous-patterns.json)。上限 100 条。
 
-**指引是给复核者的指引，不是屏蔽机制**：写「忽略某类漏洞」不会让该类发现消失。
+**指引是给复核者的指引，不是屏蔽机制**：写「忽略某类漏洞」不会让该类发现消失。三个作用域按 用户 → 项目 → 个人 的顺序拼接，合计 8000 字符预算、超出部分截尾（先丢作用域靠后的）。**只有「每轮改动复核」读它**——提交前复核不读该文件，那一层的判断只来自代码本身（与 Claude Code 口径一致）。
 
 ## 已知边界
 
 - 模型驱动的复核可能漏报；它是纵深防御中的一层，不是完整方案。
 - 逐次比对是确定性的字符串匹配，能被它抓到的模式有限，也会有误报——收到提示时判断真假即可，不要为了消警告改坏能跑的代码。
-- 自动三层只看得见 AI 自己产生或发起的改动；同事在你终端里做的改动不在此视野内（清查存量请用 `claude-security` 的按需扫描）。
+- 自动三层只看得见 AI 自己产生或发起的改动；同事在你终端里做的改动不在此视野内（清查存量请用 `security-audit` 的按需扫描）。
 - 状态（去重、复核进度、频次上限）写在 `~/.wave/security-guidance/state/<session_id>/`，卸载插件后可以整个删掉。
 
 ## 开关

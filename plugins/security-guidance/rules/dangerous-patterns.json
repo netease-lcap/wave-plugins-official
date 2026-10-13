@@ -141,6 +141,68 @@
       "regex": "(fetch|axios\\.(get|post)|requests\\.(get|post)|http\\.get|urlopen)\\s*\\([^)]*(req\\.(query|body|params)|request\\.(args|form|json)|\\binput\\s*\\(|\\$_(GET|POST|REQUEST))",
       "message": "The server fetches a URL the caller chose, which reaches internal services and cloud metadata endpoints.",
       "suggestion": "Validate the host against an allowlist and block private/link-local ranges before issuing the request."
+    },
+    {
+      "id": "github-actions-injection",
+      "name": "Untrusted event data interpolated into a workflow step",
+      "files": "\\.github/workflows/.*\\.ya?ml$",
+      "regex": "(?<!:\\s)\\$\\{\\{\\s*github\\.event\\.(issue|pull_request|comment|review|review_comment|discussion|head_commit|commits|pages)\\.",
+      "message": "An issue title, PR body or commit message interpolated straight into `run:` is attacker-controlled shell input — the classic GitHub Actions workflow injection.",
+      "suggestion": "Put the value in an `env:` entry (env: TITLE: ${{ github.event.issue.title }}) and reference it as \"$TITLE\" in run:, instead of interpolating ${{ }} into the command."
+    },
+    {
+      "id": "torch-unsafe-load",
+      "name": "torch.load without weights_only",
+      "files": "\\.(py|pyi|ipynb)$",
+      "regex": "(?:\\btorch\\.load|\\.torch_load)\\s*\\((?![^)\\n]{0,200}weights_only\\s*=\\s*True)",
+      "message": "torch.load defaults to weights_only=False, which unpickles arbitrary objects and therefore runs arbitrary code from the file.",
+      "suggestion": "Pass weights_only=True when the file holds only tensors and plain data (or set TORCH_FORCE_WEIGHTS_ONLY_LOAD=1)."
+    },
+    {
+      "id": "xml-unsafe-parse",
+      "name": "Python stdlib XML parser",
+      "files": "\\.(py|pyi|ipynb)$",
+      "regex": "\\b(xml\\.etree\\.ElementTree|ElementTree|ET)\\.(parse|fromstring|XML)\\s*\\(|\\bminidom\\.(parse|parseString)\\s*\\(|\\bxml\\.sax\\.(parse|make_parser)\\b",
+      "message": "The stdlib XML parsers resolve external entities by default, so untrusted XML can read local files (XXE) or exhaust memory (billion laughs).",
+      "suggestion": "Parse with defusedxml.ElementTree, or explicitly disable entity resolution before parsing."
+    },
+    {
+      "id": "node-createcipher-no-iv",
+      "name": "crypto.createCipher (no IV)",
+      "files": "\\.(js|jsx|ts|tsx|mjs|cjs|mts|cts|vue|svelte)$",
+      "regex": "\\bcrypto\\.(createCipher|createDecipher)\\b",
+      "message": "createCipher derives the key with a weak KDF and takes no IV, so the same plaintext always encrypts the same way. It was removed in Node 22.",
+      "suggestion": "Use crypto.createCipheriv() / createDecipheriv() with a random IV and an authenticated mode such as GCM."
+    },
+    {
+      "id": "aes-ecb-mode",
+      "name": "AES in ECB mode",
+      "regex": "\\bAES\\.MODE_ECB\\b|\\bmodes\\.ECB\\s*\\(|[\"']aes-\\d+-ecb[\"']",
+      "message": "ECB encrypts each block independently, so identical plaintext blocks produce identical ciphertext and the structure of the data leaks.",
+      "suggestion": "Use AES-GCM, or AES-CBC with a random IV plus an HMAC over the ciphertext."
+    },
+    {
+      "id": "script-src-without-sri",
+      "name": "External script without Subresource Integrity",
+      "regex": "<script\\s+(?![^>]{0,400}integrity\\s*=)[^>]{0,200}src\\s*=\\s*[\"'](?:https?:)?//[^\"']{1,300}[\"'][^>]{0,100}>",
+      "message": "A remote script tag with no integrity attribute executes whatever the CDN or the network hands back, so a compromised origin runs code in your page.",
+      "suggestion": "Add integrity=\"sha384-…\" crossorigin=\"anonymous\" to the tag, or self-host the script."
+    },
+    {
+      "id": "insertadjacenthtml-xss",
+      "name": "insertAdjacentHTML with dynamic content",
+      "files": "\\.(js|jsx|ts|tsx|mjs|cjs|mts|cts|vue|svelte)$",
+      "regex": "\\.insertAdjacentHTML\\s*\\(",
+      "message": "insertAdjacentHTML parses its argument as HTML, so any caller-supplied string in it is an XSS sink.",
+      "suggestion": "Use insertAdjacentText() when the content is text, or sanitize with DOMPurify before inserting HTML."
+    },
+    {
+      "id": "go-exec-shell-injection",
+      "name": "Go exec.Command through a shell",
+      "files": "\\.go$",
+      "regex": "exec\\.Command\\(\\s*\"(?:sh|bash|/bin/sh|/bin/bash)\"",
+      "message": "Invoking a shell and building its command line by concatenation lets anything in the arguments be interpreted as shell syntax.",
+      "suggestion": "Call the program directly with an argument list (exec.Command(\"ping\", \"-c\", \"1\", host)) instead of going through sh -c."
     }
   ]
 }

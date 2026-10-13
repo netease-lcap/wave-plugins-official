@@ -19,7 +19,6 @@ const {
   isGitRepo,
   changedFiles,
   fingerprint,
-  loadGuidance,
   layerEnabled,
 } = require("./lib.js");
 
@@ -53,8 +52,6 @@ function main() {
 
   writeState(dir, "commitReviews", [...recent, now]);
 
-  const guidance = loadGuidance(cwd);
-
   emitContext(
     "PreToolUse",
     [
@@ -64,13 +61,7 @@ function main() {
       ...pending.slice(0, 30).map(({ file, status }) => `- ${file} (${status})`),
       "",
       "Do the deeper review now, before relying on this commit: read the callers, validators and neighbouring code around each change to decide whether anything is actually exploitable — a pattern that looks dangerous can be safe here, and a real finding must not reach history. Report what you find, and fix it in this session.",
-      guidance
-        ? "\nThe team's security guidance for this repository, which the review must follow:\n\n" +
-          guidance
-        : "",
-    ]
-      .filter(Boolean)
-      .join("\n"),
+    ].join("\n"),
   );
 }
 
