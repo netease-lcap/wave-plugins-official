@@ -17,6 +17,8 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **tavily** | Tavily 官方 skills 集（search / extract / map / crawl / research），依赖本机 `tvly` CLI；来源为上游仓库 [tavily-ai/skills](https://github.com/tavily-ai/skills) |
 | **typescript-lsp** | TypeScript/JavaScript 语言服务器，提供代码智能提示 |
 | **chrome-devtools** | Chrome DevTools Protocol MCP 服务器，用于浏览器自动化 |
+| **security-guidance** | 写码过程中的自动代码安全审核：逐次编辑的危险模式比对、回合结束的语义复核、提交推送前的深度复核 |
+| **claude-security** | 按需深度安全扫描：整库 / 聚焦区域 / 分支 diff / 单个提交，多 agent 扫描 + 每条发现独立复核，产出报告与由人拍板的补丁 |
 
 ## 插件市场管理
 
@@ -75,7 +77,9 @@ wave-plugins-official/
 │   ├── frontend-design/      # 前端界面设计
 │   ├── playwright/           # 浏览器自动化 / 端到端测试
 │   ├── typescript-lsp/       # TypeScript 语言服务器
-│   └── chrome-devtools/      # 浏览器自动化
+│   ├── chrome-devtools/      # 浏览器自动化
+│   ├── security-guidance/    # 写码过程中的自动代码安全审核
+│   └── claude-security/      # 按需深度安全扫描
 └── AGENTS.md                 # 插件市场管理说明
 ```
 

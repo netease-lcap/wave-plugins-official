@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "patterns": [
+    {
+      "id": "command-injection-exec",
+      "name": "Shell command built from a variable",
+      "regex": "(exec|execSync|spawn|spawnSync|os\\.system|subprocess\\.(run|call|Popen))\\s*\\([^)]*(\\+|\\$\\{|f['\"]|%s|\\.concat\\()",
+      "message": "A shell command is assembled from data instead of a fixed argument list, so anything that reaches it can run arbitrary commands.",
+      "suggestion": "Pass arguments as a list (spawn/execFile with an argv array) instead of building one command string."
+    },
+    {
+      "id": "shell-true",
+      "name": "Subprocess with shell=True",
+      "regex": "subprocess\\.(run|call|check_output|Popen)\\s*\\([^)]*shell\\s*=\\s*True",
+      "message": "shell=True hands the command to a shell, so any interpolated value becomes shell syntax.",
+      "suggestion": "Use shell=False with an argument list; if a shell really is required, validate the input against an allowlist first."
+    },
+    {
+      "id": "eval-or-function",
+      "name": "Dynamic code evaluation",
+      "regex": "(?<![\\w.])eval\\s*\\(|new\\s+Function\\s*\\(|(?<![\\w.])exec\\s*\\([^)]*input\\s*\\(",
+      "message": "eval / new Function execute a string as code: any input that reaches it is arbitrary code execution.",
+      "suggestion": "Parse the data instead (JSON.parse, a template engine, a lookup table) rather than evaluating it."
+    },
+    {
+      "id": "shell-pipe-to-sh",
+      "name": "Piping a download into a shell",
+      "regex": "(curl|wget)[^\\n|]*\\|\\s*(sudo\\s+)?(ba)?sh\\b",
+      "message": "Piping a remote response into a shell executes whatever the server returns at that moment; the bytes are never reviewed and can change between runs.",
+      "suggestion": "Download to a file, verify its checksum or signature, then run it."
+    },
+    {
+      "id": "tls-verification-disabled",
+      "name": "TLS certificate verification disabled",
+      "regex": "rejectUnauthorized\\s*:\\s*false|verify\\s*=\\s*False|NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\"]?0|verify=False|InsecureSkipVerify\\s*:\\s*true",
+      "message": "Verification is turned off, so the connection accepts any certificate — this is a man-in-the-middle opening, not a workaround for a broken test host.",
+      "suggestion": "Fix the trust chain (add the CA to the trust store) instead of disabling verification."
+    },
+    {
+      "id": "sql-string-concat",
+      "name": "SQL assembled from strings",
+      "regex": "(SELECT|INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)[^;\\n]*(\"\\s*\\+|'\\s*\\+|\\$\\{|\\+\\s*\\w+\\s*\\+)",
+      "message": "A query is built by concatenation or interpolation, so the caller controls the SQL.",
+      "suggestion": "Use parameterised queries / prepared statements and pass values as bind parameters."
+    },
+    {
+      "id": "sql-format-string",
+      "name": "SQL assembled with a format string",
+      "regex": "(execute|query|cursor\\.execute)\\s*\\(\\s*(f['\"]|['\"][^'\"]*%s)",
+      "message": "The query text is formatted with the values baked in, which is string interpolation by another name.",
+      "suggestion": "Pass the values as parameters: cursor.execute(sql, params)."
+    },
+    {
+      "id": "xss-innerhtml",
+      "name": "Assigning to innerHTML",
+      "regex": "\\.innerHTML\\s*=|dangerouslySetInnerHTML|\\.outerHTML\\s*=",
+      "message": "Writing markup into the DOM executes scripts embedded in it if any part of the string is attacker-controlled.",
+      "suggestion": "Set textContent, or build DOM nodes; if markup is genuinely required, sanitise it with a maintained library first."
+    },
+    {
+      "id": "path-from-user-input",
+      "name": "Filesystem path built from request data",
+      "regex": "(readFile|readFileSync|writeFile|writeFileSync|createReadStream|open|sendFile|join|resolve)\\s*\\([^)]*(req\\.(query|params|body)|request\\.(args|form|json)|\\$_(GET|POST|REQUEST))",
+      "message": "A path is derived from request data, so callers can escape the intended directory with ../ or an absolute path.",
+      "suggestion": "Resolve the path and verify it is inside the expected root (path.relative / realpath prefix check) before touching it."
+    },
+    {
+      "id": "unsafe-deserialization",
+      "name": "Deserialising untrusted data",
+      "regex": "pickle\\.loads?\\(|yaml\\.load\\s*\\((?![^)]*Safe)|marshal\\.loads\\(|node-serialize|unserialize\\s*\\(|ObjectInputStream",
+      "message": "Some deserialisers can construct arbitrary objects and run code while doing so; parsing attacker-supplied bytes with them is remote code execution.",
+      "suggestion": "Use a data-only format (JSON, TOML) or the safe variant (yaml.safe_load)."
+    },
+    {
+      "id": "hardcoded-cloud-credential",
+      "name": "Hardcoded credential",
+      "regex": "(AKIA|ASIA)[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|(?<![\\w])(password|passwd|secret|api[_-]?key|token)\\s*[:=]\\s*['\"][^'\"\\s]{8,}['\"]",
+      "message": "A credential is committed in the source. Once it is in the repository it is in every clone and every history rewrite is somebody's weekend.",
+      "suggestion": "Read it from the environment or a secret store, and rotate the exposed value."
+    },
+    {
+      "id": "weak-randomness",
+      "name": "Non-cryptographic randomness for a security value",
+      "regex": "(token|secret|salt|nonce|otp|session|password|key)\\w*\\s*[:=][^;\\n]{0,60}(Math\\.random|random\\.random|rand\\(\\)|Date\\.now\\(\\)\\.toString)",
+      "message": "Math.random / time are predictable; anything that must not be guessable needs a CSPRNG.",
+      "suggestion": "Use crypto.randomUUID / crypto.randomBytes (or secrets.token_hex) and give it enough entropy."
+    },
+    {
+      "id": "weak-hash-for-password",
+      "name": "Password hashed with a fast digest",
+      "regex": "(hash|digest)\\w*\\s*\\([^)]*\\)[^;\\n]{0,40}(md5|sha1)\\b|\\b(md5|sha1)\\s*\\([^)]*password",
+      "message": "md5/sha1 are fast and unsalted: password hashes built with them fall to a wordlist in seconds.",
+      "suggestion": "Use a password hash: bcrypt, scrypt or argon2."
+    },
+    {
+      "id": "authorization-disabled",
+      "name": "Authorization check disabled",
+      "regex": "(skip|disable|bypass)[_\\s]?(auth|authorization|permission|csrf|validation)\\s*[:=]\\s*(true|True|1)|@csrf_exempt|VerifyCsrfToken[^\\n]*except",
+      "flags": "gi",
+      "message": "A security check is switched off in code. This is the change reviewers most often miss, because it looks like configuration.",
+      "suggestion": "Keep the check and fix what it rejects; if it must be off, scope it to a named test and make that explicit."
+    },
+    {
+      "id": "cors-wildcard-with-credentials",
+      "name": "Wildcard CORS together with credentials",
+      "regex": "(Access-Control-Allow-Origin['\"]?\\s*[:,]\\s*['\"]\\*['\"])[^}]*credentials|credentials\\s*:\\s*true[^}]*origin\\s*:\\s*['\"]\\*['\"]",
+      "message": "Any origin may send credentialed requests, which lets any site act as the logged-in user.",
+      "suggestion": "Echo back an allowlisted origin instead of *, and keep credentials scoped to it."
+    },
+    {
+      "id": "debug-enabled",
+      "name": "Debug mode or stack traces exposed",
+      "regex": "app\\.run\\s*\\([^)]*debug\\s*=\\s*True|DEBUG\\s*[:=]\\s*(true|True|1)|traceback\\.print_exc\\s*\\([^)]*\\)\\s*\\n[^\\n]{0,40}(return|response)",
+      "message": "Debug mode and raw tracebacks leak source, configuration and sometimes state to whoever triggers the error.",
+      "suggestion": "Gate it behind an environment check that is off by default, and log the trace instead of returning it."
+    },
+    {
+      "id": "insecure-cookie",
+      "name": "Session cookie without HttpOnly/Secure",
+      "regex": "set_cookie\\([^)]*(?!httponly=True)[^)]*\\).*|cookie\\s*:\\s*\\{[^}]*(httpOnly\\s*:\\s*false|secure\\s*:\\s*false)",
+      "message": "A session cookie without HttpOnly can be read by any script on the page, and without Secure it travels in clear text.",
+      "suggestion": "Set httpOnly, secure and sameSite on every session cookie."
+    },
+    {
+      "id": "jwt-none-or-ignored",
+      "name": "JWT signature not verified",
+      "regex": "(verify\\s*[:=]\\s*False|algorithms\\s*[:=]\\s*\\[\\s*['\"]none['\"]|decode\\s*\\([^)]*\\)\\s*(?![^;\\n]*verify)|jwt\\.decode\\s*\\([^)]*\\)\\s*$)",
+      "message": "Decoding without verifying the signature accepts a token anyone can forge.",
+      "suggestion": "Always pass the expected algorithms and verify against the signing key."
+    },
+    {
+      "id": "permissive-file-mode",
+      "name": "World-writable file permissions",
+      "regex": "(chmod|fs\\.chmod\\w*|os\\.chmod)\\s*\\([^)]*0?7(7[0-9]|[0-9]7)\\b|mode\\s*[:=]\\s*0o?777",
+      "message": "World-readable (and often world-writable) permissions expose the file to every local user.",
+      "suggestion": "Use the narrowest mode that works — 0600 for secrets and credentials."
+    },
+    {
+      "id": "ssrf-unvalidated-url",
+      "name": "Request to a caller-supplied URL",
+      "regex": "(fetch|axios\\.(get|post)|requests\\.(get|post)|http\\.get|urlopen)\\s*\\([^)]*(req\\.(query|body|params)|request\\.(args|form|json)|\\binput\\s*\\(|\\$_(GET|POST|REQUEST))",
+      "message": "The server fetches a URL the caller chose, which reaches internal services and cloud metadata endpoints.",
+      "suggestion": "Validate the host against an allowlist and block private/link-local ranges before issuing the request."
+    }
+  ]
+}

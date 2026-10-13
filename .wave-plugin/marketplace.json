@@ -58,6 +58,16 @@
       "name": "superpowers",
       "description": "Core skills library for AI coding assistants: TDD, debugging, collaboration patterns, and proven techniques",
       "source": "https://github.com/obra/superpowers.git"
+    },
+    {
+      "name": "security-guidance",
+      "description": "写码过程中的自动代码安全审核：逐次编辑的危险模式比对、回合结束的语义复核、提交推送前的深度复核",
+      "source": "./plugins/security-guidance"
+    },
+    {
+      "name": "claude-security",
+      "description": "按需深度安全扫描：对整库、聚焦区域、分支 diff 或单个提交做多 agent 扫描，每条发现经独立复核后落盘报告，并可生成由人拍板的补丁",
+      "source": "./plugins/claude-security"
     }
   ]
 }

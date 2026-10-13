@@ -24,8 +24,8 @@ $ARGUMENTS
 
 1. **检查并初始化目录**：
    - 确保 `.code2spec/templates/` 目录存在，不存在则创建。
-   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/requirements-checklist.md') ? require('path').resolve('.code2spec/templates/requirements-checklist.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/requirements-checklist.md'))"` 确定检查清单的来源路径。
-   - 使用 !`node -e "console.log(require('fs').existsSync('.code2spec/templates/spec-template.md') ? require('path').resolve('.code2spec/templates/spec-template.md') : require('path').resolve('${WAVE_PLUGIN_ROOT}/templates/spec-template.md'))"` 确定 Spec 模板的来源路径。
+   - 逐个确定模板的来源路径：`.code2spec/templates/<文件名>` 已存在时来源就是它本身，否则来源是插件自带的
+     `${WAVE_PLUGIN_ROOT}/templates/<文件名>`。用普通文件检查（`ls` 或 Read）判断存在性即可。
 
 2. **初始化缺失的模板**：
    - 逐一检查 `.code2spec/templates/requirements-checklist.md` 和 `.code2spec/templates/spec-template.md` 是否存在。
