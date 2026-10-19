@@ -8,6 +8,8 @@ allowed-tools:
   - Grep
   - AskUserQuestion
   - Agent
+  - Workflow
+  - Workflow(security-audit:scan)
   - Bash(git rev-parse*)
   - Bash(git ls-files*)
   - Bash(git symbolic-ref*)
@@ -100,6 +102,13 @@ paths after substitution — use them verbatim.
   a file, read the output and write the file with the Write tool.
 - **The audit never blocks anything.** It reports; it does not gate a commit, a push or a CI run, and no job
   offers to apply its own patches.
+- **The scanning itself runs inside the `scan` workflow, not in your turn.** Once the user has confirmed, the
+  map / hunt / verify phases belong to `Workflow({name: "security-audit:scan", args: …})` — it owns the
+  fan-out, the duplicate merge and the verification arithmetic, and it hands back the findings. Do not hand-roll
+  that loop with your own `Agent` calls: the counts a script computes are the same every run, and the ones you
+  count by hand are not. What stays yours is everything before it (measure, ask, confirm, create the scan
+  directory) and everything after it (writing `report.md` / `findings.json` / `results.sarif`, and reporting
+  back).
 
 ## What to say about safety, if asked
 

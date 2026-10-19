@@ -1,5 +1,5 @@
 {
   "name": "security-audit",
-  "description": "按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动（分支 diff、PR 的 ref 对、单个提交）/ 出补丁；多 agent 扫描 + 每条发现独立复核后落盘报告，补丁由人拍板应用",
-  "version": "1.0.0"
+  "description": "按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动（分支 diff、PR 的 ref 对、单个提交）/ 出补丁；扫描编排在 workflows/scan.js 里跑（分区 → 威胁建模 → 并行狩猎 → 独立复核），每条发现复核后才进报告，补丁由人拍板应用",
+  "version": "1.1.0"
 }

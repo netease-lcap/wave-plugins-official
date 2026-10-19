@@ -84,37 +84,76 @@ from `date -u +%Y%m%d-%H%M%S`. `scan.scope` is `branch-diff` for a ref pair and 
 `scan.scopeDetail` is the pair or the sha exactly as resolved, and `scan.revision.base` is the base ref when
 there is one.
 
-## Step 4 — Scan the change: map, hunt, verify
+## Step 4 — Scan the change: hand the phases to the scan workflow
 
-Three phases, strictly in order. Phase C is not optional and not skippable for "obviously real" findings.
-What is allowed into `findings[]`, how duplicates merge, and what goes to `rejected[]` is the report spec's
-"what may enter `findings[]`" — follow it exactly.
+The map / hunt / verify phases are the `scan` workflow's job, not yours. One call starts all of them:
 
-**A. What this change touches** — one `Agent` call with `subagent_type: "security-audit:threat-modeler"`,
-handing it the resolved pair, the changed-file list and the diff itself. It returns what the change actually
-does, the trust boundaries and entry points it touches or moves, the data that is sensitive along the new
-path, and a prioritized threat model of what an attacker would try **against this change**. Keep that text —
-every hunter in phase B needs it verbatim.
+```
+Workflow({ name: "security-audit:scan", args: {
+  mode: "changes",
+  scanRoot: "<the absolute top-level path the scan covers>",
+  runDir: "<the WAVE-SECURITY-<ts>/ directory from Step 3, absolute>",
+  scope: "branch-diff" | "commit",
+  scopeDetail: "<the pair or the sha, exactly as resolved>",
+  range: { base: "<base ref>", head: "<head ref or sha>" },
+  effort: "low" | "medium" | "high",
+  areas: [ { name: "src/api", paths: ["src/api"], fileCount: 7 }, … ]
+} })
+```
 
-**B. Hunt** — `Agent` calls with `subagent_type: "security-audit:vulnerability-hunter"`. Split the changed
-files into disjoint areas (by directory, or by subsystem when directories are meaningless) and launch **one
-hunter per area in a single message** so they run in parallel. Cap the fan-out at 6 hunters; with more areas,
-merge the smallest ones by directory until you are at 6, and state the grouping in `settings.mergedAreas`.
-Each hunter gets: its area's changed files **and the diff hunks for them**, the threat model from phase A,
-and its output schema. Hunters read the surrounding file too — a change is judged in the code it lands in —
-but a finding that the change did not introduce, touch or make reachable belongs in a codebase scan, not
-here; say so in `notes` rather than reporting it. A hunter that found nothing must say so explicitly.
+**Build `areas` from the changed files**, grouped by directory (or by subsystem where directories are
+meaningless). Unlike the codebase job the counts are small — this list is the diff's own file list, split up,
+and each hunter is told to read the diff for its area first and the surrounding file second.
 
-**C. Verify** — an independent `security-audit:finding-verifier` call for every finding from every hunter,
-handed the finding, the file and the diff hunk.
+**Pick `effort` from what the user asked for**, as the codebase job does — `medium` unless they said they
+want it thorough, in which case `high` (which also turns on three-lens adversarial verification), or `low`
+for a small change that only needs one pass.
+
+### The call returns a run id, not the findings
+
+The workflow runs in the background: this call comes back in a second with a run id and the phases it will
+run. **Then your turn ends.** Say one line to the user — what is running, roughly how big the diff is, that
+they can watch it in `/workflows` — and stop there.
+
+Do not sit in a wait loop, do not sleep and re-check, do not poll `/workflows`, and above all do not start
+writing the report. A `<task-notification>` opens a new turn when the run finishes, and that is where the
+result arrives. Idling in a loop costs the user tokens for nothing, and guessing at findings before they
+exist is the one failure this whole pipeline is built to avoid.
+
+### Where the result arrives
+
+The notification carries the run's counts in `<summary>` and the script's return value in `<result>`. Read
+`<status>` first: only `completed` has a result worth reading, and `failed` / `aborted` / `killed` means the
+scan did not finish — say so in one line, write no artifacts, and offer to re-run rather than re-running by
+yourself. If `<result>` ends with "… [result truncated at 8000 chars — the full value is in <path>]", read
+that `run-state.json`'s `result` field instead; a real scan does not fit in 8 KB.
+
+The workflow runs its three phases (threat model over the whole change, one hunter per area in parallel, one
+independent verifier per finding), and returns `{ started, settings, findings, rejected, coverage }`. For a
+change the hunters answer with **attack paths** (`opened` / `still_reachable`), which the workflow turns into
+the same candidate shape a codebase finding has — the path itself stays in `exploitScenario`, so nothing is
+lost when you transcribe it.
+
+- `started: false` — **nothing scanned and nothing failed.** `reason` + `next` say what was missing (usually
+  `areas`, `range` or `runDir`). Fix the input and start the run again; do not fall back to spawning agents
+  by hand.
+- `started: true` — the scan is done. Go to Step 5 and write the three artifacts from this result. Do not
+  re-run, re-verify or re-number anything.
+- `coverage.areasFailed` non-empty — those parts of the diff produced no candidate because their hunter failed
+  or the budget ran out. Say so in the report's `notes` and in Step 6.
 
 ## Step 5 — Write the three artifacts
 
 Write `findings.json`, `report.md` and `results.sarif` into the scan directory exactly as
 `${WAVE_SKILL_DIR}/specs/report-spec.md` defines them. **Re-read that file first** — this recipe is long and
-the artifact shapes are the part that must be exact. Stamp each finding's `revision` with
-`GIT hash-object <file>`, fill `scan.revision` from Step 1, and make `report.md`'s opening section name the
-pair and both shas so a reader can reproduce the diff.
+the artifact shapes are the part that must be exact.
+
+The content of `findings[]` and `rejected[]` is the workflow's result, already merged, verified and numbered.
+You are transcribing it, not re-deciding it: keep every field, keep the order, keep the ids. You add the same
+two per-file facts the codebase job adds — each finding's `revision` stamped with `GIT hash-object <file>`,
+and `scan.revision` from Step 1 — and make `report.md`'s opening section name the pair and both shas so a
+reader can reproduce the diff. Carry `settings.mergedAreas` / `settings.hunters` / `settings.panel` over from
+the workflow's `settings`, and put `coverage.areasFailed` into `scan.notes` when it is non-empty.
 
 ## Step 6 — Report back
 
