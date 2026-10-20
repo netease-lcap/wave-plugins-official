@@ -80,33 +80,91 @@ Exactly as `${WAVE_SKILL_DIR}/specs/report-spec.md` defines it — the timestamp
 the `git check-ignore` verification, and the four entries it may hold and nothing else. Take the timestamp
 from `date -u +%Y%m%d-%H%M%S`.
 
-## Step 4 — Scan: map, hunt, verify
+## Step 4 — Scan: hand the phases to the scan workflow
 
-Three phases, strictly in order. Phase C is not optional and not skippable for "obviously real" findings.
-What is allowed into `findings[]`, how duplicates merge, and what goes to `rejected[]` is the report spec's
-"what may enter `findings[]`" — follow it exactly.
+The map / hunt / verify phases are the `scan` workflow's job, not yours. One call starts all of them:
 
-**A. Architecture and threat model** — one `Agent` call with `subagent_type:
-"security-audit:threat-modeler"`, handing it the confirmed scope. It returns the architecture of that scope,
-the trust boundaries and entry points, what data is sensitive here, and a prioritized threat model: what an
-attacker would actually try against *this* codebase. Keep that text — every hunter in phase B needs it
-verbatim.
+```
+Workflow({ name: "security-audit:scan", args: {
+  mode: "codebase",
+  scanRoot: "<the absolute top-level path the scan covers>",
+  runDir: "<the WAVE-SECURITY-<ts>/ directory from Step 3, absolute>",
+  scope: "repo" | "path",
+  scopeDetail: "<what the user confirmed, verbatim: 'repo', or the path>",
+  excluded: ["node_modules/**", …],           // from Step 1
+  effort: "low" | "medium" | "high",
+  areas: [ { name: "src/api", paths: ["src/api"], fileCount: 412 }, … ]
+} })
+```
 
-**B. Hunt** — `Agent` calls with `subagent_type: "security-audit:vulnerability-hunter"`. Split the confirmed
-scope into disjoint areas (by directory, or by subsystem when directories are meaningless) and launch **one
-hunter per area in a single message** so they run in parallel. Cap the fan-out at 6 hunters; with more
-areas, merge the smallest ones by directory until you are at 6, and state the grouping in `settings.mergedAreas`.
-Each hunter gets: its area, the threat model from phase A, and its output schema. A hunter that found
-nothing must say so explicitly — silence is not an answer.
+**Build `areas` from Step 1's own count.** Group the tracked paths by their top-level directory (or by
+subsystem where directories are meaningless); `paths` is the group's prefix, not thousands of file names.
+Pass the count you measured — the workflow sizes its fan-out from it and records the grouping in the report.
 
-**C. Verify** — an independent `security-audit:finding-verifier` call for every finding from every hunter.
+**Pick `effort` honestly from what the user asked for.** `low` (≤3 areas, one threat model, single
+verifier) for a spot check of something small; `medium` (≤6 areas, two threat models) when they just asked
+for a scan — this is the default and what you should use unless there is a reason not to; `high` (≤12 areas,
+three threat models, and **three-lens adversarial verification** of every finding) when they said they want
+it thorough, unlimited time, or a deep audit of a security-critical area. Never inflate it to look diligent;
+`high` costs roughly three times the verification agents of `medium`.
+
+### The call returns a run id, not the findings
+
+The workflow runs in the background: this call comes back in a second with a run id and the phases it will
+run. **Then your turn ends.** Say one line to the user — what is running, roughly how many areas, that they
+can watch it in `/workflows` — and stop there.
+
+Do not sit in a wait loop, do not sleep and re-check, do not poll `/workflows`, and above all do not start
+writing the report. A `<task-notification>` opens a new turn when the run finishes, and that is where the
+result arrives. Idling in a loop costs the user tokens for nothing, and guessing at findings before they
+exist is the one failure this whole pipeline is built to avoid.
+
+### Where the result arrives
+
+The notification carries the run's counts in `<summary>` and the script's return value in `<result>` — the
+JSON described below. Two things to do with it, in this order:
+
+1. **Read `<status>` first.** Only `completed` has a result worth reading. `failed` / `aborted` / `killed`
+   means the scan did not finish: say so in one line, name the reason if there is one, write no artifacts,
+   and do not re-run by yourself — offer to re-run instead.
+2. **If `<result>` ends with "… [result truncated at 8000 chars — the full value is in <path>]", read that
+   file's `result` field instead.** A real scan does not fit in 8 KB. The path is a `run-state.json`; its
+   `result` key holds the same JSON, whole.
+
+The three phases inside the run, so you can say what is happening if the user asks:
+
+- **Threat model** — one `security-audit:threat-modeler` per component group; its brief is what that group's
+  hunters work from.
+- **Hunt** — one `security-audit:vulnerability-hunter` per area, in parallel, each with its area, the brief
+  and its output schema. A hunter that found nothing says so; silence is not an answer.
+- **Panel** — an independent `security-audit:finding-verifier` per finding (per finding × three lenses on
+  `high`). A finding enters `findings[]` only on a confirmed majority; everything else lands in `rejected[]`
+  with the verifier's reason. It is not yours to overturn either verdict.
+
+The result is `{ started, settings, findings, rejected, coverage }`, with ids already assigned (`F1`, …, `R1`,
+…) in the order that survived the merge.
+
+- `started: false` — **nothing scanned and nothing failed.** `reason` + `next` say what the call was missing
+  (usually `areas` or `runDir`). Fix the input and start the run again; do not fall back to spawning agents
+  by hand.
+- `started: true` — the scan is done. Go to Step 5 and write the three artifacts from this result. Do not
+  re-run, re-verify or re-number anything.
+- `coverage.areasFailed` non-empty — those areas produced no candidate because their hunter failed or the
+  budget ran out. Say so in the report's `notes` and in Step 6; a silently missing area reads as "clean".
 
 ## Step 5 — Write the three artifacts
 
 Write `findings.json`, `report.md` and `results.sarif` into the scan directory exactly as
 `${WAVE_SKILL_DIR}/specs/report-spec.md` defines them. **Re-read that file first** — this recipe is long and
-the artifact shapes are the part that must be exact. Fill `scan.revision` from Step 1, and stamp each
-finding's `revision` with `GIT hash-object <file>`.
+the artifact shapes are the part that must be exact.
+
+The content of `findings[]` and `rejected[]` is the workflow's result, already merged, verified and numbered.
+You are transcribing it, not re-deciding it: keep every field the finding carries, keep the order, keep the
+ids. Two things you add, because they are per-file facts about the working tree rather than about the scan:
+`scan.revision` from Step 1, and each finding's `revision` block stamped with `GIT hash-object <file>` (plus
+`size`/`mtime` as the fallback when the directory is not under version control). Also carry
+`settings.mergedAreas`, `settings.hunters` and `settings.panel` over from the workflow's `settings`, and put
+`coverage.areasFailed` into `scan.notes` when it is non-empty.
 
 ## Step 6 — Report back
 
