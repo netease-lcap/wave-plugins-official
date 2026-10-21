@@ -9,6 +9,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **code2cwspec** | 从现有代码逆向生成为 CodeWave 格式的 spec.md + menus.md + TypeScript 实体/枚举声明文件 |
 | **code2spec** | 分析代码仓库，自动识别功能模块并生成编号规格说明文档（多智能体架构） |
 | **commit-skills** | 简化的 Git 工作流技能，支持提交、推送和创建 Pull Request |
+| **cw-sdd-procode** | 低码项目的 SDD 开发工具集：按迭代规格（`docs/<迭代>/specs` 与 `plans`）审计、拆分任务后编码；在独立 worktree 开发分支开发，推送并合并 master 后给出同步提示 |
 | **deep-wiki** | AI 驱动的 Wiki 生成器，支持 Mermaid 图表、源码引用、入职指南和 llms.txt |
 | **document-skills** | 文档处理套件，包含 Excel、Word、PowerPoint 和 PDF 处理能力 |
 | **frontend-design** | 创建独特的、生产级前端界面，避免千篇一律的 AI 审美 |
@@ -72,6 +73,7 @@ wave-plugins-official/
 │   ├── code2cwspec/          # 代码转 CodeWave 规范
 │   ├── code2spec/            # 代码转规格说明
 │   ├── commit-skills/        # Git 工作流技能
+│   ├── cw-sdd-procode/       # SDD 代码生成与推送（低码项目）
 │   ├── deep-wiki/            # Wiki 生成器
 │   ├── document-skills/      # 文档处理套件
 │   ├── frontend-design/      # 前端界面设计
