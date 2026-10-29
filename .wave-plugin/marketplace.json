@@ -36,7 +36,7 @@
     },
     {
       "name": "cw-sdd-procode",
-      "description": "低码项目的 SDD 开发工具集：按迭代规格审计、拆分任务后编码；在独立 worktree 开发分支开发，推送并合并 master 后给出同步提示。",
+      "description": "高码项目的端云协同 SDD 开发工具集：按迭代规格审计现状、拆分任务并生成端侧与云侧代码；在独立 worktree 开发分支开发，按需推送当前分支或合并 master。",
       "source": "./plugins/cw-sdd-procode"
     },
     {
