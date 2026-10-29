@@ -1,5 +1,5 @@
 {
   "name": "cw-sdd-procode",
   "description": "低码项目的 SDD 开发工具集：按迭代规格（docs/<迭代>/specs 与 plans）审计现状、拆分任务后编码；在独立 worktree 开发分支开发，推送分支并合并 master 后给出同步提示。",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
