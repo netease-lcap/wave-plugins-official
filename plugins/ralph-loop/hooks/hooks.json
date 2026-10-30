@@ -1,0 +1,16 @@
+{
+  "description": "Ralph 循环：Stop hook 拦下退出，把同一段 prompt 喂回去接着干",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${WAVE_PLUGIN_ROOT}/hooks/stop.js\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
