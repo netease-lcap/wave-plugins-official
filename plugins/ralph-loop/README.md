@@ -13,6 +13,8 @@
         │
         ├─ 状态写入 .wave/ralph-loop.local.md（frontmatter 存参数，正文 = 原始 prompt）
         │
+        ├─ 模型**当场开始执行 prompt**（这就是第 1 轮，不会先回一句「已就绪」）
+        │
         └─ agent 干完一轮想停
               └─ Stop hook 拦下：iteration+1 写回，把「第 N 轮提示行 + 原始 prompt」
                  写到 stderr 并 exit 2
@@ -49,27 +51,25 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 /ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]
 ```
 
-- `<prompt>`：原样保存、原样喂回，一字不改。可以带引号、`$`、`;`、`&&`、换行、反引号。
-- `--max-iterations N`：**最多跑 N 轮（含首个回合）**，也就是最多喂回 `N-1` 次，到点自动停。
-  `0` 或不给 = 不限轮。语义与 Claude Code 的 ralph-loop 一致。
+- `<prompt>`：**第 1 轮就执行**，之后每轮原样喂回。成对引号按 shell 规则去掉
+  （`"Fix the auth bug"` → `Fix the auth bug`），其余逐字保留 —— `$`、`;`、`&&`、换行、反引号都没问题。
+- `--max-iterations N`：**总共跑 N 轮（含首个回合）**，也就是最多喂回 `N-1` 次，到点自动停。
+  `0` 或不给 = 不限轮。语义与 Claude Code 的 ralph-loop 一致。同一个 flag 给多次，取最后一个（同 CC）。
 - `--completion-promise TEXT`：模型输出 `<promise>TEXT</promise>` 时循环结束（逐字比较）。
 - `--help` / `-h`：打印用法并退出，不会启动循环、不写状态文件。
 
-轮次怎么数（和 CC 对齐，别搞混）：
+轮次怎么数（和 CC 对齐）：
 
-| 参数 | 总共跑 | 喂回次数 | 提示行依次是 |
+| 参数 | 总共跑 | 喂回次数 | 注入的提示行 |
 |---|---|---|---|
-| `--max-iterations 1` | 1 轮 | 0 | （不会出现） |
+| `--max-iterations 1` | 1 轮（就这一轮，当场干活） | 0 | 无 |
 | `--max-iterations 2` | 2 轮 | 1 | 第 2 轮 |
 | `--max-iterations 5` | 5 轮 | 4 | 第 2、3、4、5 轮 |
 | 不给 / `0` | 不限 | 不限 | 第 2、3、4… 轮 |
 
-两个容易踩的点：
-
-- **第 1 轮是「启动命令那个回合」本身**（模型只回一句「Ralph 循环已就绪」就结束），
-  真正干活的第一个回合在提示行里显示的是「第 2 轮」—— 和 CC 的 `Ralph iteration 2` 一致。
-- 所以 `--max-iterations 1` 等价于**一次都不喂回**，prompt 根本不会被执行（CC 同样如此）。
-  想跑 1 次活请用 `--max-iterations 2`。
+**第 1 轮就是「敲下命令的那个回合」**：skill 先把状态写好，然后模型当场开始执行
+prompt，回合结束时才被 Stop hook 拦下。所以 `--max-iterations 1` 是「跑一次活就停」，
+不会有任何回喂 —— 和 CC 一样。
 
 例子：
 
@@ -89,6 +89,21 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 > 时，这个循环会一直跑下去，每一轮都在花模型调用，只有你手动 `/ralph-loop:cancel-ralph`
 > 或按 `Esc` 中断才会停。按 `Esc` 是立刻停下（引擎不跑 Stop hook），但状态文件还在，
 > 下次这个会话结束回合时循环会被重新接上 —— 想彻底停就用 cancel 命令。
+
+## 与 CC（Claude Code ralph-loop）的差异
+
+默认一切以 CC 为准：参数语义（N = 总回合数）、首回合就干活、`--help`/`-h`、
+引号剥除、重复 flag 后者覆盖，都对齐了。下面这些是**刻意**不一致的地方：
+
+| 差异 | 为什么 |
+|---|---|
+| 状态文件放 `<cwd>/.wave/ralph-loop.local.md`，不是 `.claude/` | `.wave/` 是 wave 自己的项目级约定目录 |
+| 支持 `--max-iterations=10` 等号形式 | 更符合 Unix 习惯；CC 的解析循环会把它当 prompt 正文（等于悄悄不设上限）。等号形式只是**多支持**一种写法，`--flag value` 的语义完全同 CC |
+| 已有循环时**拒绝启动**，要求先 `/ralph-loop:cancel-ralph` | CC 是静默覆盖状态文件，会把正在跑的循环冲掉、且不告诉你旧 prompt 丢了 |
+| 多行 prompt **原样保留换行** | CC 会把多行塌成一行，结构化 prompt（清单、代码块）会被毁掉 |
+| Stop hook 用 `exit 2` + stderr，不是 `{"decision":"block"}` JSON | wave 的 hook 协议没有 `systemMessage` / `decision` 通道；「第几轮 / 怎么退出」只能折进喂回去的正文 |
+| 命令名是 `/ralph-loop:ralph-loop` 而不是 `/ralph-loop` | wave 里插件贡献的斜杠命令一律带插件名前缀 |
+| 入口是 `skills/*/SKILL.md` 而不是 `commands/*.md` | wave 里 command 正文拿不到 `${WAVE_PLUGIN_ROOT}`，且内联 bash 受权限门控（见文末实现说明） |
 
 ## 适合什么任务
 
@@ -121,8 +136,10 @@ session_id: "0f3c…"
 - **会话隔离**：`session_id` 与 Stop hook 输入里的 `session_id` 不一致时直接放行，
   同一项目里别的会话不会被这个循环卡住。启动时拿不到会话 id，所以先写空串，
   由本会话第一次 Stop hook 认领并写回。
-- **`iteration` 的含义是「当前回合序号」，启动时写 `1`**（首个回合算第 1 轮，与 CC 一致），
-  不是「已回喂次数」。别把它当计数器从 0 起算，会让 `--max-iterations` 整体差一轮。
+- **`iteration` 的含义是「当前回合序号」，启动时写 `1`**（第 1 轮就是敲命令那个回合，
+  与 CC 一致），不是「已回喂次数」。别把它当计数器从 0 起算，会让 `--max-iterations` 整体差一轮。
+- **正文是剥过引号的 prompt**：和 CC 一样做 shell 式 quote removal，只去成对引号，
+  空白与换行一字不动。
 - **iteration 原子更新**：写临时文件再 `rename`，避免 hook 与命令并发时读到半个文件。
 - **脏文件即停**：`iteration` / `max_iterations` 不是非负整数、正文为空、frontmatter
   读不出来 ⇒ 删文件 + 放行。宁可停，也不要拿着看不懂的状态死循环。
@@ -135,7 +152,7 @@ session_id: "0f3c…"
    的 stderr 不会进对话。所以「已到 N 轮上限」「命中完成条件」「状态文件不合法」这些
    收尾信息写在 hook 日志里（`~/.wave/logs/`），用户界面上看到的是「这一轮正常结束了」。
 2. **每轮喂回去的提示行对用户不可见**：它是 `isMeta` 的 user message，模型看得到
-   （因此知道自己处在循环里），UI 不展示。
+   （因此知道自己处在循环里），UI 不展示。第 1 轮本来就没有这行（它就是你敲命令那一轮）。
 
 ## 自测
 
@@ -145,8 +162,9 @@ node plugins/ralph-loop/scripts/self-test.mjs
 
 直接跑真实的 hook 与 CLI 进程（不 mock），覆盖：没有状态文件、session 不匹配、脏文件、
 到上限、完成标记命中、未命中继续（含 iteration 递增与 prompt 原样喂回）、参数经 stdin
-传输的逐字完整性（引号 / `$` / `;` / `&&` / 单引号 / 换行 / 反引号）、会话认领、
-重复启动、cancel，以及**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 一次都不喂回、
+的完整性（引号剥除、成对引号、词中引号、多行仍保留换行、`$` / `;` / `&&` 不被当命令）、
+重复 flag 取最后一个、等号形式 `--max-iterations=10`、会话认领、重复启动、cancel，
+以及**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 首回合就干活且零回喂、
 `--help` 不写状态文件）。
 
 ## 实现说明（为什么入口是 skill 而不是 commands/*.md）

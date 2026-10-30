@@ -41,9 +41,13 @@ const MAX_PROMPT_CHARS = 200000;
  *   否则写回 `iteration + 1` 并再喂一次。
  *
  * 于是 `--max-iterations N` = 总共 N 个回合（含首回合）= N-1 次回喂：
- *   - N = 1：首回合结束就停，0 次回喂；
+ *   - N = 1：只跑首回合（**首回合会正常执行 prompt**），不喂回；
  *   - N = 2：喂回 1 次，共 2 轮（第 2 轮的提示行写「第 2 轮」，同 CC 的 `Ralph iteration 2`）；
  *   - N = 0：不限轮。
+ *
+ * 「首回合」就是用户敲 `/ralph-loop:ralph-loop …` 的那个回合：skill 先把状态写好，
+ * 然后模型**当场开始执行 prompt**，回合结束时才被 Stop hook 拦下 —— 这是 CC 的行为，
+ * 早前把它写成「首回合只回一句就绪、什么都不干」是错的，会让 N 少算一轮。
  *
  * 曾经写成 `iteration: 0`，那会让同一个 N 多跑一轮（N 次回喂 = N+1 个回合），与 CC 不一致。
  */
@@ -61,13 +65,13 @@ const USAGE_LINES = [
   "  /ralph-loop:cancel-ralph",
   "",
   "参数：",
-  "  <prompt>                  要反复喂回去的任务。原样保存、原样喂回，可以带引号、$、;、&&、换行。",
-  "  --max-iterations N        最多跑 N 轮（含首个回合，与 Claude Code 同语义）。0 = 不限轮，默认 0。",
+  "  <prompt>                  要反复执行的任务。成对的引号会被去掉（同 shell），其余逐字保留。",
+  "  --max-iterations N        总共跑 N 轮（含首个回合，与 Claude Code 同语义）。0 = 不限轮，默认 0。",
   "  --completion-promise TEXT 模型输出 <promise>TEXT</promise> 时结束（归一空白后逐字比较）。",
   "",
   "轮次怎么数：",
-  "  --max-iterations 1  ⇒ 不喂回任何一次（第 1 轮就是启动命令本身那个回合，prompt 不会被执行）；",
-  "  --max-iterations 2  ⇒ 喂回 1 次，共 2 轮；",
+  "  --max-iterations 1  ⇒ 只跑第 1 轮（首回合就干活），不喂回；",
+  "  --max-iterations 2  ⇒ 第 1 轮 + 喂回 1 次 = 共 2 轮；",
   "  --max-iterations 0  ⇒ 不限轮。",
   "",
   "例子：",
@@ -112,22 +116,33 @@ function hasHelpFlag(text) {
 
 /**
  * 从文本里取一个 `--flag value` / `--flag=value` / `--flag "value"`。
- * 只认「前面是空白或行首」的出现位置，避免误伤 prompt 里的同名字样；
- * 取值后把这一段从文本里摘掉，剩下的是 prompt。
+ *
+ * 只认「前面是空白或行首」的出现位置，避免误伤 prompt 里的同名字样。
+ *
+ * 同一 flag 出现多次时（CC 的解析循环也是这个行为）：**全部从文本里摘掉，
+ * 取最后一个的值**（后者覆盖）。
  *
  * @returns {{value: string, rest: string} | null}
  */
 function takeFlag(text, name) {
+  const spans = [];
+  let lastValue = null;
   let searchFrom = 0;
+
   for (;;) {
     const index = text.indexOf(name, searchFrom);
-    if (index === -1) return null;
+    if (index === -1) break;
     if (index > 0 && !/\s/.test(text[index - 1])) {
       searchFrom = index + name.length;
       continue;
     }
 
     let cursor = index + name.length;
+    // `--max-iterations-xxx` 这种不是本 flag，别吃进来
+    if (cursor < text.length && !/[\s=]/.test(text[cursor])) {
+      searchFrom = index + name.length;
+      continue;
+    }
     if (text[cursor] === "=") cursor += 1;
     while (cursor < text.length && (text[cursor] === " " || text[cursor] === "\t")) {
       cursor += 1;
@@ -152,9 +167,97 @@ function takeFlag(text, name) {
       }
     }
 
-    const rest = `${text.slice(0, index).replace(/[ \t]+$/, "")}${text.slice(cursor)}`;
-    return { value, rest };
+    // 顺带吃掉紧邻前面的行内空白，避免摘掉 flag 后留下多余空格；
+    // flag 在行首时改成吃掉后面的行内空白（否则 "=" 形式的写法会留下前导空格）。
+    let start = index;
+    if (index === 0 || text[index - 1] === "\n") {
+      while (cursor < text.length && (text[cursor] === " " || text[cursor] === "\t")) {
+        cursor += 1;
+      }
+    } else {
+      while (start > 0 && (text[start - 1] === " " || text[start - 1] === "\t")) {
+        start -= 1;
+      }
+    }
+    spans.push([start, cursor]);
+    lastValue = value;
+    searchFrom = cursor;
   }
+
+  if (lastValue === null) return null;
+
+  // 从后往前删，前面的下标才不会失效
+  let rest = text;
+  for (let i = spans.length - 1; i >= 0; i -= 1) {
+    rest = `${rest.slice(0, spans[i][0])}${rest.slice(spans[i][1])}`;
+  }
+  return { value: lastValue, rest };
+}
+
+/**
+ * 去掉 prompt 正文里**成对**的引号，等价于 shell 的 quote removal。
+ *
+ * CC 的 prompt 是经 shell 展开进 setup 脚本的，所以 `"Fix the auth bug"` 到脚本手里
+ * 就是 `Fix the auth bug`。这里做同样的事：
+ *   - `'…'` 里的内容原样保留（单引号内没有转义）；
+ *   - `"…"` 里的 `\"` → `"`、`\\` → `\`，其余反斜杠原样；
+ *   - 词中间的引号同样成对剥除（`Fix "the auth" bug` → `Fix the auth bug`）；
+ *   - 找不到配对引号时，这个引号原样留着（不猜）。
+ *
+ * 刻意**不**折叠空白 / 换行：CC 会把多行 prompt 塌成一行，那会毁掉结构化 prompt，
+ * 我们不复制这个缺陷（见 README「与 CC 的差异」）。
+ */
+function stripQuotes(text) {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+
+    if (ch === "'") {
+      const end = text.indexOf("'", i + 1);
+      if (end === -1) {
+        out += ch;
+        i += 1;
+        continue;
+      }
+      out += text.slice(i + 1, end);
+      i = end + 1;
+      continue;
+    }
+
+    if (ch === '"') {
+      let j = i + 1;
+      let inner = "";
+      let closed = false;
+      while (j < text.length) {
+        const c = text[j];
+        if (c === "\\" && j + 1 < text.length && (text[j + 1] === '"' || text[j + 1] === "\\")) {
+          inner += text[j + 1];
+          j += 2;
+          continue;
+        }
+        if (c === '"') {
+          closed = true;
+          j += 1;
+          break;
+        }
+        inner += c;
+        j += 1;
+      }
+      if (closed) {
+        out += inner;
+        i = j;
+      } else {
+        out += ch;
+        i += 1;
+      }
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+  return out;
 }
 
 /** 把命令行参数拆成 prompt + 两个选项。 */
@@ -183,7 +286,8 @@ function parseStartInput(raw) {
     }
   }
 
-  const prompt = rest.replace(/^\n+/, "").replace(/\s+$/, "");
+  // 引号剥除与 CC 一致（shell quote removal）；空白与换行一律不动。
+  const prompt = stripQuotes(rest.replace(/^\n+/, "").replace(/\s+$/, ""));
   if (!prompt.trim()) {
     fail(
       "没有 prompt。用法：/ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]（细节见 /ralph-loop:ralph-loop --help）",
@@ -234,18 +338,20 @@ function start(cwd) {
   const lines = [
     "✅ Ralph 循环已就绪",
     `- 状态文件：${STATE_REL_PATH}`,
+    // CC 的 setup 会打印 `Iteration: 1`；让首回合的模型知道自己正处在第 1 轮。
+    `- 迭代：第 ${INITIAL_ITERATION} 轮 / ${
+      maxIterations > 0 ? `共 ${maxIterations} 轮` : "不限"
+    }`,
     `- 轮次上限：${
       maxIterations > 0
         ? `${maxIterations} 轮（含首个回合；即最多喂回 ${maxIterations - 1} 次）`
         : "不限（靠完成标记或手动取消收尾）"
     }`,
     `- 完成条件：${completionPromise ? `<promise>${completionPromise}</promise>` : "未设"}`,
-    `- prompt 正文：${prompt.length} 字符（逐字保存，未做任何改写）`,
+    `- prompt 正文：${prompt.length} 字符（已按 shell 规则去掉成对引号，其余逐字保存）`,
   ];
   if (maxIterations === 1) {
-    lines.push(
-      "- 上限是 1 轮：不会喂回任何一次，prompt 不会被真正执行（想跑 1 次活请用 --max-iterations 2）",
-    );
+    lines.push("- 本回合就是唯一一轮：干完这一轮就结束，不会再喂回");
   }
   if (maxIterations === 0) {
     lines.push(

@@ -241,7 +241,7 @@ console.log("\n⑥ 未命中 → iteration+1 写回 + prompt 原样喂回");
 }
 
 // ── ⑦ 参数经 stdin 传输的完整性 ────────────────────────────────
-console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 / 换行 逐字无损");
+console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换行 都不丢");
 {
   const cwd = tmpDir();
   const prompt = [
@@ -249,7 +249,15 @@ console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 /
     '  保留缩进：$HOME 与 `date` 与 $(whoami)',
     `  危险字符：a; b && c | d > e < f & g`,
     `  引号：'single' "double" 反斜杠 \\ 结尾`,
-    "最后一行（不要把 --max-iterations 之外的东西当参数）",
+    "最后一行（中文括号里的话也要原样留下）",
+  ].join("\n");
+  // 期望：成对引号被剥掉（shell quote removal），其余逐字保留、换行不折叠
+  const expectedBody = [
+    "请修好 tests/login.test.ts",
+    '  保留缩进：$HOME 与 `date` 与 $(whoami)',
+    `  危险字符：a; b && c | d > e < f & g`,
+    `  引号：single double 反斜杠 \\ 结尾`,
+    "最后一行（中文括号里的话也要原样留下）",
   ].join("\n");
   const stdin = `--max-iterations 2 --completion-promise "ALL TESTS PASS"\n${prompt}\n`;
   const res = runCli(cwd, ["start"], stdin);
@@ -257,8 +265,8 @@ console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 /
   const parsed = parseStateText(readState(cwd) || "");
   check("状态文件可解析", parsed.ok, `reason=${parsed.reason}`);
   check(
-    "prompt 正文逐字一致（含引号 / $ / ; / && / 换行）",
-    parsed.ok && parsed.body === `${prompt}\n`,
+    "prompt 正文：剥掉成对引号，其余逐字一致（含 $ / ; / && / 换行）",
+    parsed.ok && parsed.body === `${expectedBody}\n`,
     `实际正文=${JSON.stringify(parsed && parsed.body)}`,
   );
   check("--max-iterations 解析为 2", parsed.ok && parsed.meta.max_iterations === "2", `meta=${JSON.stringify(parsed.meta)}`);
@@ -269,6 +277,63 @@ console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 /
   );
   check("setup 输出提示了轮次上限", res.stdout.includes("轮次上限：2 轮"), `stdout=${res.stdout}`);
   check("setup 启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1", `meta=${JSON.stringify(parsed.meta)}`);
+  check("setup 输出带迭代信息（第 1 轮 / 共 2 轮）", res.stdout.includes("迭代：第 1 轮 / 共 2 轮"), `stdout=${res.stdout}`);
+
+  // 引号剥除的几种形态（对齐 CC 的 shell quote removal）
+  const quoteCases = [
+    ['整段双引号', '"Fix the auth bug"', "Fix the auth bug"],
+    ["整段单引号", "'Fix the auth bug'", "Fix the auth bug"],
+    ["词中引号", 'Fix "the auth" bug', "Fix the auth bug"],
+    ["词中单引号", "Fix 'the auth' bug", "Fix the auth bug"],
+    ["双引号内的转义", '"say \\"hi\\" now"', 'say "hi" now'],
+    ["多行 + 引号：换行必须保留", '第一行 "带引号"\n第二行', "第一行 带引号\n第二行"],
+    ["只有半边引号时原样保留", "don't panic", "don't panic"],
+  ];
+  for (const [label, input, expected] of quoteCases) {
+    const caseCwd = tmpDir();
+    const caseRes = runCli(caseCwd, ["start"], `${input}\n`);
+    const caseParsed = parseStateText(readState(caseCwd) || "");
+    check(
+      `引号剥除：${label}`,
+      caseRes.code === 0 && caseParsed.ok && caseParsed.body === `${expected}\n`,
+      `body=${JSON.stringify(caseParsed.ok && caseParsed.body)} 期望=${JSON.stringify(expected + "\n")}`,
+    );
+  }
+
+  // 同一 flag 给多次：后者覆盖（CC 的解析循环也是每次覆盖）
+  const cwdDup = tmpDir();
+  const resDup = runCli(
+    cwdDup,
+    ["start"],
+    "--max-iterations 2 --completion-promise FIRST\n干活\n--max-iterations 5 --completion-promise SECOND",
+  );
+  const parsedDup = parseStateText(readState(cwdDup) || "");
+  check(
+    "重复 flag：取最后一个值",
+    resDup.code === 0 &&
+      parsedDup.ok &&
+      parsedDup.meta.max_iterations === "5" &&
+      parsedDup.meta.completion_promise === "SECOND",
+    `meta=${JSON.stringify(parsedDup.ok && parsedDup.meta)}`,
+  );
+  check(
+    "重复 flag：全部从 prompt 正文里摘掉",
+    parsedDup.ok && parsedDup.body === "干活\n",
+    `body=${JSON.stringify(parsedDup.ok && parsedDup.body)}`,
+  );
+
+  // 等号形式（CC 不认，我们额外支持）
+  const cwdEq = tmpDir();
+  const resEq = runCli(cwdEq, ["start"], "--max-iterations=10 干活");
+  const parsedEq = parseStateText(readState(cwdEq) || "");
+  check(
+    "--max-iterations=10 等号形式生效",
+    resEq.code === 0 &&
+      parsedEq.ok &&
+      parsedEq.meta.max_iterations === "10" &&
+      parsedEq.body === "干活\n",
+    `meta=${JSON.stringify(parsedEq.ok && parsedEq.meta)} body=${JSON.stringify(parsedEq.ok && parsedEq.body)}`,
+  );
 
   // 裸值形式 + 无引号
   const cwd2 = tmpDir();
@@ -379,7 +444,7 @@ console.log("\n⑩ 轮次语义与 CC 对齐（N 含首个回合）");
   const setup1 = runCli(cwd1, ["start"], `--max-iterations 1\n${PROMPT}`);
   const afterSetup1 = parseStateText(readState(cwd1) || "");
   check("N=1 启动后 iteration=1", setup1.code === 0 && afterSetup1.ok && afterSetup1.meta.iteration === "1", `meta=${JSON.stringify(afterSetup1.ok && afterSetup1.meta)}`);
-  check("N=1 setup 输出提示「不会喂回」", setup1.stdout.includes("不会喂回任何一次"), `stdout=${setup1.stdout}`);
+  check("N=1 setup 输出提示「就这一轮」", setup1.stdout.includes("本回合就是唯一一轮"), `stdout=${setup1.stdout}`);
 
   const stopOne = runHook(cwd1, { session_id: "s1", last_assistant_message: "干完了" });
   check("N=1 首次 Stop ⇒ 零回喂（exit 0）", stopOne.code === 0, `实际 exit=${stopOne.code}`);
