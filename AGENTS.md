@@ -39,3 +39,7 @@ To remove a plugin from the marketplace:
 Whenever a plugin is added or removed, update `README.md` to reflect the change:
 - Add/remove the plugin entry in the **插件列表** table.
 - Update the **目录结构** section if a directory was added or deleted.
+
+## Self-check
+After adding/removing a plugin or editing `README.md`, run `node scripts/check-marketplace.mjs`.
+It must print `PASS` (exit 0); otherwise fix every finding it reports under `[a]`–`[e]`.
