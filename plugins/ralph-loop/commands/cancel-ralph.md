@@ -1,7 +1,5 @@
 ---
-name: cancel-ralph
 description: 取消当前项目的 Ralph 循环（删除 .wave/ralph-loop.local.md）
-disable-model-invocation: true
 allowed-tools:
   - Bash(node *ralph-loop.js*)
 ---
@@ -11,7 +9,7 @@ allowed-tools:
 删除本项目的 Ralph 循环状态文件：
 
 ```!
-node ${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js cancel
+node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" cancel
 ```
 
 把上面那行的输出原样回给用户，不要做别的。

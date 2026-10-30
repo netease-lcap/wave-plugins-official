@@ -2,22 +2,20 @@
 "use strict";
 
 /**
- * Ralph 循环的命令行入口，由 skills/*\/SKILL.md 里的内联命令调用：
+ * Ralph 循环的命令行入口，由 commands/*.md 里的内联命令调用：
  *
- *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start <<'WAVE_RALPH_ARGS'
- *   $ARGUMENTS
- *   WAVE_RALPH_ARGS
+ *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start --args-file "${WAVE_ARGUMENTS_FILE}"
  *
  *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" cancel
  *
- *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start <<'WAVE_RALPH_ARGS'
- *   --help
- *   WAVE_RALPH_ARGS
+ * 为什么参数走文件而不是命令行：wave 对 `$ARGUMENTS` 是**原文替换、不加引号不
+ * 转义**，prompt 里出现 `"`、`'`、`$`、`;`、`&&`、反引号都会被 shell 重新解析
+ * （甚至被当成要执行的命令）。`${WAVE_ARGUMENTS_FILE}` 是 wave 提供的旁路：它被
+ * 替换成一个临时文件的绝对路径，内容就是用户敲进来的参数原文，调用结束即删除。
+ * 于是命令行里只多一个路径词，参数怎么长都不影响 shell 怎么解析——包括引号，
+ * 这里也因此**不做** shell 那套 quote removal：用户写什么，prompt 就是什么。
  *
- * 为什么参数走 stdin 而不是命令行参数：wave 对 `$ARGUMENTS` 是**原文替换、不加
- * 引号不转义**，prompt 里出现 `"`、`'`、`$`、`;`、`&&`、反引号都会被 shell 重
- * 新解析（甚至被当成要执行的命令）。所以整段文本经带引号的 heredoc 原样送进
- * stdin，切分完全由这里做：带 `"` / `'` 引号的值按引号取，裸值取到空白为止，
+ * 切分仍由这里做：`--max-iterations` / `--completion-promise` 从文本里摘掉，
  * 剩下的整段（保留原有换行与引号）就是 prompt 正文。
  */
 
@@ -65,7 +63,7 @@ const USAGE_LINES = [
   "  /ralph-loop:cancel-ralph",
   "",
   "参数：",
-  "  <prompt>                  要反复执行的任务。成对的引号会被去掉（同 shell），其余逐字保留。",
+  "  <prompt>                  要反复执行的任务。逐字保留（引号、多行、$ 都不动）。",
   "  --max-iterations N        总共跑 N 轮（含首个回合，与 Claude Code 同语义）。0 = 不限轮，默认 0。",
   "  --completion-promise TEXT 模型输出 <promise>TEXT</promise> 时结束（归一空白后逐字比较）。",
   "",
@@ -95,10 +93,37 @@ function fail(message) {
   process.exit(1);
 }
 
-function readStdin() {
+/**
+ * `--args-file <路径>`：参数文件由 wave 的 `${WAVE_ARGUMENTS_FILE}` 提供。
+ *
+ * 只认这一种入口——本脚本不读 stdin，也不模仿 shell 的引号处理。
+ */
+function readArgsFilePath(argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "--args-file") {
+      return argv[i + 1] || null;
+    }
+    if (arg.startsWith("--args-file=")) {
+      return arg.slice("--args-file=".length) || null;
+    }
+  }
+  return null;
+}
+
+function readArgsFile(argv) {
+  const filePath = readArgsFilePath(argv);
+  if (!filePath) {
+    fail(
+      "缺少 --args-file：这个命令只由 /ralph-loop:ralph-loop 触发，参数经 " +
+        "${WAVE_ARGUMENTS_FILE} 传入（需要支持该占位符的 wave 客户端）",
+    );
+    return "";
+  }
   try {
-    return require("fs").readFileSync(0, "utf8");
-  } catch {
+    return require("fs").readFileSync(filePath, "utf8");
+  } catch (error) {
+    fail(`读不到参数文件 ${filePath}：${error && error.message ? error.message : error}`);
     return "";
   }
 }
@@ -194,72 +219,6 @@ function takeFlag(text, name) {
   return { value: lastValue, rest };
 }
 
-/**
- * 去掉 prompt 正文里**成对**的引号，等价于 shell 的 quote removal。
- *
- * CC 的 prompt 是经 shell 展开进 setup 脚本的，所以 `"Fix the auth bug"` 到脚本手里
- * 就是 `Fix the auth bug`。这里做同样的事：
- *   - `'…'` 里的内容原样保留（单引号内没有转义）；
- *   - `"…"` 里的 `\"` → `"`、`\\` → `\`，其余反斜杠原样；
- *   - 词中间的引号同样成对剥除（`Fix "the auth" bug` → `Fix the auth bug`）；
- *   - 找不到配对引号时，这个引号原样留着（不猜）。
- *
- * 刻意**不**折叠空白 / 换行：CC 会把多行 prompt 塌成一行，那会毁掉结构化 prompt，
- * 我们不复制这个缺陷（见 README「与 CC 的差异」）。
- */
-function stripQuotes(text) {
-  let out = "";
-  let i = 0;
-  while (i < text.length) {
-    const ch = text[i];
-
-    if (ch === "'") {
-      const end = text.indexOf("'", i + 1);
-      if (end === -1) {
-        out += ch;
-        i += 1;
-        continue;
-      }
-      out += text.slice(i + 1, end);
-      i = end + 1;
-      continue;
-    }
-
-    if (ch === '"') {
-      let j = i + 1;
-      let inner = "";
-      let closed = false;
-      while (j < text.length) {
-        const c = text[j];
-        if (c === "\\" && j + 1 < text.length && (text[j + 1] === '"' || text[j + 1] === "\\")) {
-          inner += text[j + 1];
-          j += 2;
-          continue;
-        }
-        if (c === '"') {
-          closed = true;
-          j += 1;
-          break;
-        }
-        inner += c;
-        j += 1;
-      }
-      if (closed) {
-        out += inner;
-        i = j;
-      } else {
-        out += ch;
-        i += 1;
-      }
-      continue;
-    }
-
-    out += ch;
-    i += 1;
-  }
-  return out;
-}
-
 /** 把命令行参数拆成 prompt + 两个选项。 */
 function parseStartInput(raw) {
   let rest = String(raw == null ? "" : raw).replace(/\r\n/g, "\n");
@@ -286,8 +245,9 @@ function parseStartInput(raw) {
     }
   }
 
-  // 引号剥除与 CC 一致（shell quote removal）；空白与换行一律不动。
-  const prompt = stripQuotes(rest.replace(/^\n+/, "").replace(/\s+$/, ""));
+  // 参数是用户敲进来的原文（已经不经过 shell），所以只去掉首尾空行/空白，
+  // 引号一律保留 —— 用户写什么，prompt 就是什么。
+  const prompt = rest.replace(/^\n+/, "").replace(/\s+$/, "");
   if (!prompt.trim()) {
     fail(
       "没有 prompt。用法：/ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]（细节见 /ralph-loop:ralph-loop --help）",
@@ -301,7 +261,7 @@ function parseStartInput(raw) {
 }
 
 function start(cwd) {
-  const input = readStdin();
+  const input = readArgsFile(process.argv.slice(2));
 
   // `--help` 要在「已有循环」检查之前处理：用户只是想看用法，不该被状态文件挡住，
   // 更不该被当成 prompt 正文真的起一个循环（CC 的 setup 脚本同样是先打用法再 exit 0）。
@@ -348,7 +308,7 @@ function start(cwd) {
         : "不限（靠完成标记或手动取消收尾）"
     }`,
     `- 完成条件：${completionPromise ? `<promise>${completionPromise}</promise>` : "未设"}`,
-    `- prompt 正文：${prompt.length} 字符（已按 shell 规则去掉成对引号，其余逐字保存）`,
+    `- prompt 正文：${prompt.length} 字符（用户输入的原文，引号与换行都保留）`,
   ];
   if (maxIterations === 1) {
     lines.push("- 本回合就是唯一一轮：干完这一轮就结束，不会再喂回");
@@ -371,7 +331,7 @@ function start(cwd) {
   process.stdout.write(`${lines.join("\n")}\n`);
 
   // 回显 prompt 原文（CC 的 setup 也是这么做的）：模型从命令返回里就能读到任务内容，
-  // 不必自己去翻用户那条消息。这里打的是**解析后写进状态文件的那份**（引号已剥除），
+  // 不必自己去翻用户那条消息。这里打的是**解析后写进状态文件的那份**（原文逐字），
   // 所以「模型看到的任务」和「每轮回喂的正文」逐字一致。
   process.stdout.write("\n");
   process.stdout.write(`${prompt}\n`);
@@ -398,7 +358,7 @@ function main() {
   if (action === "cancel") return cancel(cwd);
 
   fail(
-    `未知子命令「${action || "(空)"}」。用法：ralph-loop.js start|cancel（start 从 stdin 读 prompt），查看用法加 --help`,
+    `未知子命令「${action || "(空)"}」。用法：ralph-loop.js start|cancel（start 需要 --args-file <参数文件>），查看用法加 --help`,
   );
 }
 

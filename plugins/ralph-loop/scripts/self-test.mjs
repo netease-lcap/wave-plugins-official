@@ -7,7 +7,7 @@
  * 覆盖：
  *   ① 无状态文件 ② session 不匹配 ③ 脏文件 ④ 到上限 ⑤ promise 命中
  *   ⑥ 未命中继续（含 iteration 递增与 prompt 原样喂回）
- *   ⑦ 参数经 stdin 传输后逐字无损（引号 / $ / ; / && / 单引号 / 换行 / 反引号）
+ *   ⑦ 参数经 --args-file 传输后逐字无损（引号 / $ / ; / && / 单引号 / 换行 / 反引号）
  *   ⑧ setup 认领会话 id、重复启动被拒、cancel 删文件
  *   ⑨ 非 Stop 事件不接管
  *   ⑩ 轮次语义与 Claude Code 对齐（N=2 只喂回 1 次、N=1 零喂回、--help 不起循环）
@@ -74,10 +74,21 @@ function runHook(cwd, input) {
   return { code: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-function runCli(cwd, args, stdin) {
-  const result = spawnSync(process.execPath, [CLI, ...args], {
+// 真实的 wave 会把 `$ARGUMENTS` 原文写进 `${WAVE_ARGUMENTS_FILE}`，命令正文里
+// 只出现这个路径——参数不经过 shell，所以引号/`$`/`;` 都不必转义。这里照办：
+// 第三个参数是参数文件的内容，命令行上只多一个 `--args-file <路径>`。
+let argsFileSeq = 0;
+
+function runCli(cwd, args, argsText) {
+  const extra = [];
+  if (argsText != null) {
+    argsFileSeq += 1;
+    const argsFile = path.join(tmpDir(), `args-${argsFileSeq}.txt`);
+    fs.writeFileSync(argsFile, argsText, "utf8");
+    extra.push("--args-file", argsFile);
+  }
+  const result = spawnSync(process.execPath, [CLI, ...args, ...extra], {
     cwd,
-    input: stdin == null ? "" : stdin,
     encoding: "utf8",
   });
   return { code: result.status, stdout: result.stdout, stderr: result.stderr };
@@ -241,7 +252,7 @@ console.log("\n⑥ 未命中 → iteration+1 写回 + prompt 原样喂回");
 }
 
 // ── ⑦ 参数经 stdin 传输的完整性 ────────────────────────────────
-console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换行 都不丢");
+console.log("\n⑦ setup 从参数文件读参数：引号 / $ / ; / && / 换行 都原样保留");
 {
   const cwd = tmpDir();
   const prompt = [
@@ -251,12 +262,12 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
     `  引号：'single' "double" 反斜杠 \\ 结尾`,
     "最后一行（中文括号里的话也要原样留下）",
   ].join("\n");
-  // 期望：成对引号被剥掉（shell quote removal），其余逐字保留、换行不折叠
+  // 期望：一个字都不改——参数没经过 shell，引号不是语法，是正文
   const expectedBody = [
     "请修好 tests/login.test.ts",
     '  保留缩进：$HOME 与 `date` 与 $(whoami)',
     `  危险字符：a; b && c | d > e < f & g`,
-    `  引号：single double 反斜杠 \\ 结尾`,
+    `  引号：'single' "double" 反斜杠 \\ 结尾`,
     "最后一行（中文括号里的话也要原样留下）",
   ].join("\n");
   const stdin = `--max-iterations 2 --completion-promise "ALL TESTS PASS"\n${prompt}\n`;
@@ -265,7 +276,7 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
   const parsed = parseStateText(readState(cwd) || "");
   check("状态文件可解析", parsed.ok, `reason=${parsed.reason}`);
   check(
-    "prompt 正文：剥掉成对引号，其余逐字一致（含 $ / ; / && / 换行）",
+    "prompt 正文：逐字一致（含引号 / $ / ; / && / 换行 / 反引号）",
     parsed.ok && parsed.body === `${expectedBody}\n`,
     `实际正文=${JSON.stringify(parsed && parsed.body)}`,
   );
@@ -279,7 +290,7 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
   check("setup 启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1", `meta=${JSON.stringify(parsed.meta)}`);
   check("setup 输出带迭代信息（第 1 轮 / 共 2 轮）", res.stdout.includes("迭代：第 1 轮 / 共 2 轮"), `stdout=${res.stdout}`);
   check(
-    "setup 在摘要之后空一行、回显 prompt 原文（逐字，含引号剥除后的正文与换行）",
+    "setup 在摘要之后空一行、回显 prompt 原文（逐字，含引号与换行）",
     parsed.ok && res.stdout.endsWith(`\n\n${expectedBody}\n`),
     `尾部=${JSON.stringify(res.stdout.slice(-120))}`,
   );
@@ -294,24 +305,25 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
     `stdout=${res.stdout}`,
   );
 
-  // 引号剥除的几种形态（对齐 CC 的 shell quote removal）
+  // 引号不再是语法：不做 shell 的 quote removal，写什么就是什么
   const quoteCases = [
-    ['整段双引号', '"Fix the auth bug"', "Fix the auth bug"],
-    ["整段单引号", "'Fix the auth bug'", "Fix the auth bug"],
-    ["词中引号", 'Fix "the auth" bug', "Fix the auth bug"],
-    ["词中单引号", "Fix 'the auth' bug", "Fix the auth bug"],
-    ["双引号内的转义", '"say \\"hi\\" now"', 'say "hi" now'],
-    ["多行 + 引号：换行必须保留", '第一行 "带引号"\n第二行', "第一行 带引号\n第二行"],
-    ["只有半边引号时原样保留", "don't panic", "don't panic"],
+    ["整段双引号", '"Fix the auth bug"'],
+    ["整段单引号", "'Fix the auth bug'"],
+    ["词中引号", 'Fix "the auth" bug'],
+    ["词中单引号", "Fix 'the auth' bug"],
+    ["双引号里的反斜杠", '"say \\"hi\\" now"'],
+    ["多行 + 引号：换行必须保留", '第一行 "带引号"\n第二行'],
+    ["只有半边引号", "don't panic"],
+    ["看起来像要执行的东西也不执行", "$(rm -rf /) `whoami` a && b"],
   ];
-  for (const [label, input, expected] of quoteCases) {
+  for (const [label, input] of quoteCases) {
     const caseCwd = tmpDir();
     const caseRes = runCli(caseCwd, ["start"], `${input}\n`);
     const caseParsed = parseStateText(readState(caseCwd) || "");
     check(
-      `引号剥除：${label}`,
-      caseRes.code === 0 && caseParsed.ok && caseParsed.body === `${expected}\n`,
-      `body=${JSON.stringify(caseParsed.ok && caseParsed.body)} 期望=${JSON.stringify(expected + "\n")}`,
+      `原样保留：${label}`,
+      caseRes.code === 0 && caseParsed.ok && caseParsed.body === `${input}\n`,
+      `body=${JSON.stringify(caseParsed.ok && caseParsed.body)} 期望=${JSON.stringify(input + "\n")}`,
     );
   }
 
@@ -386,6 +398,17 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
   const cwd4 = tmpDir();
   const res4 = runCli(cwd4, ["start"], "--max-iterations 3\n");
   check("空 prompt 被拒", res4.code === 1 && readState(cwd4) === null, `stdout=${res4.stdout}`);
+
+  // 手敲 start 而没有参数文件：说清缺什么，而不是静默起一个空循环
+  const cwdNoArgs = tmpDir();
+  const resNoArgs = runCli(cwdNoArgs, ["start"]);
+  check(
+    "缺 --args-file ⇒ 非零退出并点名原因",
+    resNoArgs.code === 1 &&
+      resNoArgs.stdout.includes("--args-file") &&
+      readState(cwdNoArgs) === null,
+    `exit=${resNoArgs.code} stdout=${resNoArgs.stdout}`,
+  );
 }
 
 // ── ⑧ 会话认领 / 重复启动 / cancel ─────────────────────────────

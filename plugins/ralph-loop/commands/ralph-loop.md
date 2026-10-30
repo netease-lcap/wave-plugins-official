@@ -1,10 +1,7 @@
 ---
-name: ralph-loop
 description: 启动 Ralph 循环：把同一段 prompt 反复喂回自己，靠文件系统与 git 历史累积迭代，直到输出完成标记或到达迭代上限
-disable-model-invocation: true
 allowed-tools:
   - Bash(node *ralph-loop.js*)
-  - Bash(node *ralph-loop.js* <<'WAVE_RALPH_ARGS'*>*)
 ---
 
 # Ralph 循环
@@ -27,9 +24,7 @@ allowed-tools:
 先把状态写进 `.wave/ralph-loop.local.md`：
 
 ```!
-node ${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js start <<'WAVE_RALPH_ARGS'
-$ARGUMENTS
-WAVE_RALPH_ARGS
+node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start --args-file "${WAVE_ARGUMENTS_FILE}"
 ```
 
 ## 接下来怎么做

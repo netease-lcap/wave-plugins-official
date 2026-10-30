@@ -44,6 +44,10 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 
 > wave 里插件贡献的斜杠命令一律带插件名前缀，所以命令实际是
 > `/ralph-loop:ralph-loop` 与 `/ralph-loop:cancel-ralph`。
+>
+> 需要在支持 `${WAVE_PLUGIN_ROOT}` 与 `${WAVE_ARGUMENTS_FILE}` 的 wave 上用
+> （这两个占位符都是这次一起加的）。旧客户端上正文里的占位符不会替换，命令会
+> 直接报「读不到参数文件」，不会悄悄跑错。
 
 ### 启动
 
@@ -51,8 +55,9 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 /ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]
 ```
 
-- `<prompt>`：**第 1 轮就执行**，之后每轮原样喂回。成对引号按 shell 规则去掉
-  （`"Fix the auth bug"` → `Fix the auth bug`），其余逐字保留 —— `$`、`;`、`&&`、换行、反引号都没问题。
+- `<prompt>`：**第 1 轮就执行**，之后每轮原样喂回。**逐字保留**：引号、`$`、`;`、`&&`、
+  反引号、换行都不会被 shell 解析或改写 —— 参数经 `${WAVE_ARGUMENTS_FILE}` 传进脚本，
+  整段文本从头到尾不经过 shell（见文末实现说明）。
 - `--max-iterations N`：**总共跑 N 轮（含首个回合）**，也就是最多喂回 `N-1` 次，到点自动停。
   `0` 或不给 = 不限轮。语义与 Claude Code 的 ralph-loop 一致。同一个 flag 给多次，取最后一个（同 CC）。
 - `--completion-promise TEXT`：模型输出 `<promise>TEXT</promise>` 时循环结束（逐字比较）。
@@ -67,13 +72,13 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 | `--max-iterations 5` | 5 轮 | 4 | 第 2、3、4、5 轮 |
 | 不给 / `0` | 不限 | 不限 | 第 2、3、4… 轮 |
 
-**第 1 轮就是「敲下命令的那个回合」**：skill 先把状态写好，然后模型当场开始执行
+**第 1 轮就是「敲下命令的那个回合」**：命令先把状态写好，然后模型当场开始执行
 prompt，回合结束时才被 Stop hook 拦下。所以 `--max-iterations 1` 是「跑一次活就停」，
 不会有任何回喂 —— 和 CC 一样。
 
 setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC 的 setup 相同），模型
 直接从命令返回里读到任务，不依赖它自己去翻上一条消息；回显的就是写进状态文件的那份
-（引号已剥除），所以「模型看到的任务」与「每轮回喂的正文」逐字一致。设了完成条件时，
+（逐字，含引号与换行），所以「模型看到的任务」与「每轮回喂的正文」逐字一致。设了完成条件时，
 输出里还会补三行写法说明（逐字输出 `<promise>…</promise>`、没做到不许输出、
 换别的说法不算数）。
 
@@ -99,7 +104,8 @@ setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC �
 ## 与 CC（Claude Code ralph-loop）的差异
 
 默认一切以 CC 为准：参数语义（N = 总回合数）、首回合就干活、`--help`/`-h`、
-引号剥除、重复 flag 后者覆盖，都对齐了。下面这些是**刻意**不一致的地方：
+重复 flag 后者覆盖、入口都是 `commands/*.md` + 内联 bash，都对齐了。下面这些是**刻意**
+不一致的地方：
 
 | 差异 | 为什么 |
 |---|---|
@@ -109,7 +115,7 @@ setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC �
 | 多行 prompt **原样保留换行** | CC 会把多行塌成一行，结构化 prompt（清单、代码块）会被毁掉 |
 | Stop hook 用 `exit 2` + stderr，不是 `{"decision":"block"}` JSON | wave 的 hook 协议没有 `systemMessage` / `decision` 通道；「第几轮 / 怎么退出」只能折进喂回去的正文 |
 | 命令名是 `/ralph-loop:ralph-loop` 而不是 `/ralph-loop` | wave 里插件贡献的斜杠命令一律带插件名前缀 |
-| 入口是 `skills/*/SKILL.md` 而不是 `commands/*.md` | wave 里 command 正文拿不到 `${WAVE_PLUGIN_ROOT}`，且内联 bash 受权限门控（见文末实现说明） |
+| prompt 里的引号**原样保留**（CC 按 shell 规则剥掉成对引号：`"Fix it"` → `Fix it`） | CC 的参数拼进 shell，引号是语法；wave 的参数经 `${WAVE_ARGUMENTS_FILE}` 走文件，引号就是用户写下的正文字符，剥掉反而是改用户的话 |
 
 ## 适合什么任务
 
@@ -144,8 +150,8 @@ session_id: "0f3c…"
   由本会话第一次 Stop hook 认领并写回。
 - **`iteration` 的含义是「当前回合序号」，启动时写 `1`**（第 1 轮就是敲命令那个回合，
   与 CC 一致），不是「已回喂次数」。别把它当计数器从 0 起算，会让 `--max-iterations` 整体差一轮。
-- **正文是剥过引号的 prompt**：和 CC 一样做 shell 式 quote removal，只去成对引号，
-  空白与换行一字不动。
+- **正文是 prompt 原文**：引号、`$`、换行一字不动（参数没经过 shell，也就没有 quote
+  removal 这回事）。
 - **iteration 原子更新**：写临时文件再 `rename`，避免 hook 与命令并发时读到半个文件。
 - **脏文件即停**：`iteration` / `max_iterations` 不是非负整数、正文为空、frontmatter
   读不出来 ⇒ 删文件 + 放行。宁可停，也不要拿着看不懂的状态死循环。
@@ -167,36 +173,28 @@ node plugins/ralph-loop/scripts/self-test.mjs
 ```
 
 直接跑真实的 hook 与 CLI 进程（不 mock），覆盖：没有状态文件、session 不匹配、脏文件、
-到上限、完成标记命中、未命中继续（含 iteration 递增与 prompt 原样喂回）、参数经 stdin
-的完整性（引号剥除、成对引号、词中引号、多行仍保留换行、`$` / `;` / `&&` 不被当命令）、
-重复 flag 取最后一个、等号形式 `--max-iterations=10`、会话认领、重复启动、cancel，
+到上限、完成标记命中、未命中继续（含 iteration 递增与 prompt 原样喂回）、参数经
+`--args-file` 的完整性（引号、`$`、反引号、`;`、`&&` 都不丢也不执行、多行仍保留换行、
+`$(…)` 不被当命令）、重复 flag 取最后一个、等号形式 `--max-iterations=10`、
+缺 `--args-file` 时报错、会话认领、重复启动、cancel，
 以及**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 首回合就干活且零回喂、
 `--help` 不写状态文件）。
 
-## 实现说明（为什么入口是 skill 而不是 commands/*.md）
+## 实现说明（参数怎么进来）
 
-任务书按 CC 的经验把入口设计成 `commands/*.md` + 内联 bash。在 wave 上实测（`wave 1.5.1`）
-有三条硬事实让这条路走不通，于是入口改用 `skills/`，两个 skill 同样注册为带前缀的斜杠命令：
+入口和 CC 一样是 `commands/*.md` + 内联 bash：命令正文只做一件事 —— 把那行的输出
+（状态文件的写入结果与 prompt 回显）摆到模型面前。参数不拼进命令行，而是走文件：
 
-| 实测 | 结果 |
+| 环节 | 做法 |
 |---|---|
-| 插件的 `commands/*.md` 正文里 `${WAVE_PLUGIN_ROOT}` | **不替换**，展开为空串 → `node /scripts/…` 必然找不到脚本。占位符只对 skills / hooks / MCP / LSP / subagents 生效（`builtin/skills/settings.ts` 的说明，`commandArgumentParser` 之外没有任何替换点） |
-| 命令 / 技能正文里的内联 bash | 会过权限门 `createBashCommandGate`，默认模式下没有命中 allow 规则就**直接拒**（命令被静默跳过） |
-| `$ARGUMENTS` 替换 | 原文替换、不加引号不转义（`commandArgumentParser.ts`），直接拼进 shell 会被 prompt 里的 `"` `'` `$` `;` `&&` 破坏 |
+| 参数怎么进来 | 正文写 `--args-file "${WAVE_ARGUMENTS_FILE}"`。wave 把 `$ARGUMENTS` **原文**写进一个临时文件（`0600`，命令跑完立刻删除，成功失败都删），命令里只留这个路径 |
+| 为什么走文件 | 命令行上只有一个路径词，prompt 里有什么都不影响 shell 怎么解析 —— 引号不是语法、`$` 不展开、反引号不会执行、`;` / `&&` 不会切成两条命令、多行也不会被折平；正文里有多个 `!` 命令也互不干扰（按调用各建一个文件） |
+| 脚本怎么定位自己 | `node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js"`，`${WAVE_PLUGIN_ROOT}`（以及等价的 `${CLAUDE_PLUGIN_ROOT}`）对 `commands/*.md` 正文同样生效 |
+| 权限 | 内联命令仍然过权限门，由 frontmatter 的 `allowed-tools: Bash(node *ralph-loop.js*)` 放行（命令形态固定，一条规则就够） |
+| hook 与脚本 | 一律 node，不写 bash 脚本（Windows 上 `bash` 可能解析到 WSL 的），也不依赖 `jq` / `perl` |
 
-所以最终形态是：
-
-- **参数走 stdin**。heredoc 用带引号的分隔符（`<<'WAVE_RALPH_ARGS'`），shell 不做任何展开，
-  `$ARGUMENTS` 原文进 stdin，切分与解析全部在 node 里做（`scripts/ralph-loop.js`）。
-- **内联命令是单一形态的 `node …/ralph-loop.js`**，靠 skill 的 `allowed-tools` 放行，
-  而且规则刻意写成两条：
-  - `Bash(node *ralph-loop.js*)` —— 普通情况（且 `cancel` 那种单条命令）；
-  - `Bash(node *ralph-loop.js* <<'WAVE_RALPH_ARGS'*>*)` —— prompt 里出现 `>` 时。
-    权限系统会把命令里的 `>` 当成写重定向，只给第一条规则会被判「有重定向的命令不能用
-    无重定向的规则放行」而拒；第二条把放行范围钉死在「同一个 ralph-loop 脚本 + 同一个
-    heredoc」，`node x/ralph-loop.js > /tmp/pwn` 这类真重定向仍然被拒。
-- hook 与脚本一律 node，不写 bash 脚本（Windows 上 `bash` 可能解析到 WSL bash），
-  也不依赖 `jq` / `perl`。
+脚本**不做** shell 的引号处理：不剥成对引号、不拆词。参数已经不是 shell 语法了，
+再模仿一次只会把用户真写的引号吃掉。
 
 ## 目录
 
@@ -209,10 +207,10 @@ ralph-loop/
 ├── lib/
 │   ├── state.js            # 状态文件解析、格式化、原子写、删除
 │   └── loop.js             # 判定逻辑（纯函数，自测直接覆盖）
-├── scripts/
-│   ├── ralph-loop.js       # start / cancel（start 从 stdin 读 prompt）
-│   └── self-test.mjs       # 自测
-└── skills/
-    ├── ralph-loop/SKILL.md     # /ralph-loop:ralph-loop
-    └── cancel-ralph/SKILL.md   # /ralph-loop:cancel-ralph
+├── commands/
+│   ├── ralph-loop.md       # /ralph-loop:ralph-loop
+│   └── cancel-ralph.md     # /ralph-loop:cancel-ralph
+└── scripts/
+    ├── ralph-loop.js       # start / cancel（start 用 --args-file 读 prompt）
+    └── self-test.mjs       # 自测
 ```
