@@ -358,7 +358,23 @@ function start(cwd) {
       `- ⚠️ 没有设上限：这个循环只会在输出完成标记或你 ${CANCEL_COMMAND} 时停下`,
     );
   }
+  if (completionPromise) {
+    // CC 的 setup 会打印一大段 `CRITICAL - … Completion Promise`；这里只保留
+    // 模型真正需要知道的三件事：怎么输出、必须逐字一致、不许谎报（篇幅要紧）。
+    lines.push(
+      `- 完成写法：全部做完并验证通过后，输出 <promise>${completionPromise}</promise>（必须逐字一致）；`,
+      "  没做到就别输出它 —— 谎报会让循环提前结束，等于任务没做完；",
+      "  用别的说法描述完成不算数，循环不会识别。",
+    );
+  }
+
   process.stdout.write(`${lines.join("\n")}\n`);
+
+  // 回显 prompt 原文（CC 的 setup 也是这么做的）：模型从命令返回里就能读到任务内容，
+  // 不必自己去翻用户那条消息。这里打的是**解析后写进状态文件的那份**（引号已剥除），
+  // 所以「模型看到的任务」和「每轮回喂的正文」逐字一致。
+  process.stdout.write("\n");
+  process.stdout.write(`${prompt}\n`);
 }
 
 function cancel(cwd) {

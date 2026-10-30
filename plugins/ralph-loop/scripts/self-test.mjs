@@ -278,6 +278,21 @@ console.log("\n⑦ setup 从 stdin 读参数：引号剥除 / $ / ; / && / 换�
   check("setup 输出提示了轮次上限", res.stdout.includes("轮次上限：2 轮"), `stdout=${res.stdout}`);
   check("setup 启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1", `meta=${JSON.stringify(parsed.meta)}`);
   check("setup 输出带迭代信息（第 1 轮 / 共 2 轮）", res.stdout.includes("迭代：第 1 轮 / 共 2 轮"), `stdout=${res.stdout}`);
+  check(
+    "setup 在摘要之后空一行、回显 prompt 原文（逐字，含引号剥除后的正文与换行）",
+    parsed.ok && res.stdout.endsWith(`\n\n${expectedBody}\n`),
+    `尾部=${JSON.stringify(res.stdout.slice(-120))}`,
+  );
+  check(
+    "回显的正文与写进状态文件的正文逐字一致",
+    parsed.ok && res.stdout.endsWith(`\n\n${parsed.body}`),
+    `body=${JSON.stringify(parsed.ok && parsed.body)}`,
+  );
+  check(
+    "设了完成条件时 setup 输出说明写法（不许谎报）",
+    res.stdout.includes("<promise>ALL TESTS PASS</promise>") && res.stdout.includes("没做到就别输出"),
+    `stdout=${res.stdout}`,
+  );
 
   // 引号剥除的几种形态（对齐 CC 的 shell quote removal）
   const quoteCases = [
