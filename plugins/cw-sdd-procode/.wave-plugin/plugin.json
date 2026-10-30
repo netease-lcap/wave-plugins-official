@@ -1,5 +1,5 @@
 {
   "name": "cw-sdd-procode",
   "description": "高码项目的端云协同 SDD 开发工具集：按迭代规格（docs/<迭代>/specs 与 plans）审计现状、拆分任务并生成端侧与云侧代码；在独立 worktree 开发分支开发，按需推送当前分支或合并 master。",
-  "version": "1.0.2"
+  "version": "1.0.3"
 }
