@@ -29,6 +29,8 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 - **市场注册表**: `.wave-plugin/marketplace.json`
 - **插件配置**: `plugins/<plugin-name>/.wave-plugin/plugin.json`
 
+改完注册表或本 README 后，跑 `node scripts/check-marketplace.mjs` 自检（注册表可解析、本地插件与注册条目一致、README 插件列表与目录结构同步），必须输出 `PASS`。
+
 ### 添加新插件
 
 **方式一：随市场仓库一起分发（默认）**
@@ -84,6 +86,8 @@ wave-plugins-official/
 │   ├── security-guidance/    # 写码过程中的自动代码安全审核
 │   ├── security-audit/       # 按需深度安全审计
 │   └── ralph-loop/           # Ralph 循环（同一 prompt 反复喂回）
+├── scripts/
+│   └── check-marketplace.mjs # 插件市场一致性自检
 └── AGENTS.md                 # 插件市场管理说明
 ```
 
