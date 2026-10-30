@@ -9,6 +9,8 @@
  *   ⑥ 未命中继续（含 iteration 递增与 prompt 原样喂回）
  *   ⑦ 参数经 stdin 传输后逐字无损（引号 / $ / ; / && / 单引号 / 换行 / 反引号）
  *   ⑧ setup 认领会话 id、重复启动被拒、cancel 删文件
+ *   ⑨ 非 Stop 事件不接管
+ *   ⑩ 轮次语义与 Claude Code 对齐（N=2 只喂回 1 次、N=1 零喂回、--help 不起循环）
  */
 
 import { spawnSync } from "node:child_process";
@@ -229,11 +231,11 @@ console.log("\n⑥ 未命中 → iteration+1 写回 + prompt 原样喂回");
 
   // 没有完成条件时的提示行
   const cwd2 = tmpDir();
-  writeState(cwd2, { iteration: 0, maxIterations: 0, completionPromise: "", sessionId: "s1" }, PROMPT);
+  writeState(cwd2, { iteration: 1, maxIterations: 0, completionPromise: "", sessionId: "s1" }, PROMPT);
   const res2 = runHook(cwd2, { session_id: "s1", last_assistant_message: "x" });
   check(
     "未设完成条件时提示不同",
-    res2.code === 2 && res2.stderr.startsWith("🔄 Ralph 第 1 轮 | 未设完成条件"),
+    res2.code === 2 && res2.stderr.startsWith("🔄 Ralph 第 2 轮 | 未设完成条件"),
     `stderr=${JSON.stringify(res2.stderr.slice(0, 60))}`,
   );
 }
@@ -265,7 +267,8 @@ console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 /
     parsed.ok && parsed.meta.completion_promise === "ALL TESTS PASS",
     `meta=${JSON.stringify(parsed.meta)}`,
   );
-  check("setup 输出提示了上限", res.stdout.includes("迭代上限：2 轮"), `stdout=${res.stdout}`);
+  check("setup 输出提示了轮次上限", res.stdout.includes("轮次上限：2 轮"), `stdout=${res.stdout}`);
+  check("setup 启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1", `meta=${JSON.stringify(parsed.meta)}`);
 
   // 裸值形式 + 无引号
   const cwd2 = tmpDir();
@@ -278,6 +281,19 @@ console.log("\n⑦ setup 从 stdin 读参数：引号 / $ / ; / && / 单引号 /
       parsed2.meta.completion_promise === "NOOP" &&
       parsed2.body === "随便做点什么\n",
     `stdout=${res2.stdout} body=${JSON.stringify(parsed2.ok && parsed2.body)}`,
+  );
+
+  // 不认识的 flag 必须原样留在 prompt 里（与 CC 一致，不报错）
+  const cwd5 = tmpDir();
+  const res5 = runCli(cwd5, ["start"], "--foo bar --unknown\n干活");
+  const parsed5 = parseStateText(readState(cwd5) || "");
+  check(
+    "未知 flag 仍算 prompt 正文（不报错）",
+    res5.code === 0 &&
+      parsed5.ok &&
+      parsed5.body === "--foo bar --unknown\n干活\n" &&
+      parsed5.meta.max_iterations === "0",
+    `stdout=${res5.stdout} body=${JSON.stringify(parsed5.ok && parsed5.body)}`,
   );
 
   // 非法 flag
@@ -306,7 +322,7 @@ console.log("\n⑧ 会话认领、重复启动、cancel");
   const other = runHook(cwd, { session_id: "会话-B", last_assistant_message: "x" });
   const after = parseStateText(readState(cwd) || "");
   check("认领后别的会话被放行", other.code === 0, `实际 exit=${other.code}`);
-  check("认领后 iteration 不再变", after.ok && after.meta.iteration === "1", `meta=${JSON.stringify(after.meta)}`);
+  check("认领后 iteration 不再变", after.ok && after.meta.iteration === "2", `meta=${JSON.stringify(after.meta)}`);
 
   // 已有循环时不允许重复启动
   const dup = runCli(cwd, ["start"], "另一个任务");
@@ -322,14 +338,76 @@ console.log("\n⑧ 会话认领、重复启动、cancel");
 console.log("\n⑨ 非 Stop 事件不接管");
 {
   const cwd = tmpDir();
-  writeState(cwd, { iteration: 0, maxIterations: 5, completionPromise: "", sessionId: "s1" }, PROMPT);
+  writeState(cwd, { iteration: 1, maxIterations: 5, completionPromise: "", sessionId: "s1" }, PROMPT);
   const res = spawnSync(process.execPath, [HOOK], {
     cwd,
     input: JSON.stringify({ hook_event_name: "SubagentStop", cwd, session_id: "s1" }),
     encoding: "utf8",
   });
   check("SubagentStop → exit 0", res.status === 0, `实际 exit=${res.status}`);
-  check("SubagentStop 不动状态文件", parseStateText(readState(cwd) || "").meta.iteration === "0");
+  check("SubagentStop 不动状态文件", parseStateText(readState(cwd) || "").meta.iteration === "1");
+}
+
+// ── ⑩ 与 Claude Code 对齐的轮次语义 ────────────────────────────
+// CC：启动写 iteration: 1，自增之前判 iteration >= max_iterations。
+// 所以 --max-iterations N = N 个回合 = N-1 次回喂。这里用真实进程数回喂次数。
+console.log("\n⑩ 轮次语义与 CC 对齐（N 含首个回合）");
+{
+  // N = 2：stop#1 回喂一次（iteration 写回 2），stop#2 到上限收尾
+  const cwd = tmpDir();
+  const setup = runCli(cwd, ["start"], `--max-iterations 2\n${PROMPT}`);
+  const afterSetup = parseStateText(readState(cwd) || "");
+  check(
+    "N=2 启动后 iteration=1（首回合算第 1 轮）",
+    setup.code === 0 && afterSetup.ok && afterSetup.meta.iteration === "1",
+    `meta=${JSON.stringify(afterSetup.ok && afterSetup.meta)}`,
+  );
+
+  const stop1 = runHook(cwd, { session_id: "s1", last_assistant_message: "第 1 轮干完了" });
+  const after1 = parseStateText(readState(cwd) || "");
+  check("N=2 第一次 Stop ⇒ 恰好 1 次回喂（exit 2）", stop1.code === 2, `实际 exit=${stop1.code}`);
+  check("N=2 回喂提示行是「第 2 轮」", stop1.stderr.startsWith("🔄 Ralph 第 2 轮"), `stderr=${JSON.stringify(stop1.stderr.slice(0, 40))}`);
+  check("N=2 iteration 写回 2", after1.ok && after1.meta.iteration === "2", `meta=${JSON.stringify(after1.ok && after1.meta)}`);
+
+  const stop2 = runHook(cwd, { session_id: "s1", last_assistant_message: "第 2 轮干完了" });
+  check("N=2 第二次 Stop ⇒ 到上限，不再回喂（exit 0）", stop2.code === 0, `实际 exit=${stop2.code}`);
+  check("N=2 第二次 Stop 后状态文件已删除", readState(cwd) === null);
+  check("N=2 播报「2 轮上限」", stop2.stderr.includes("2 轮上限"), `stderr=${stop2.stderr}`);
+
+  // N = 1：首次 Stop 就到上限，零回喂
+  const cwd1 = tmpDir();
+  const setup1 = runCli(cwd1, ["start"], `--max-iterations 1\n${PROMPT}`);
+  const afterSetup1 = parseStateText(readState(cwd1) || "");
+  check("N=1 启动后 iteration=1", setup1.code === 0 && afterSetup1.ok && afterSetup1.meta.iteration === "1", `meta=${JSON.stringify(afterSetup1.ok && afterSetup1.meta)}`);
+  check("N=1 setup 输出提示「不会喂回」", setup1.stdout.includes("不会喂回任何一次"), `stdout=${setup1.stdout}`);
+
+  const stopOne = runHook(cwd1, { session_id: "s1", last_assistant_message: "干完了" });
+  check("N=1 首次 Stop ⇒ 零回喂（exit 0）", stopOne.code === 0, `实际 exit=${stopOne.code}`);
+  check("N=1 首次 Stop 后状态文件已删除", readState(cwd1) === null);
+  check("N=1 播报「1 轮上限」", stopOne.stderr.includes("1 轮上限"), `stderr=${stopOne.stderr}`);
+
+  // --help：打印用法、exit 0、绝不写状态文件（也不被已有循环挡住）
+  for (const flag of ["--help", "-h"]) {
+    const cwdHelp = tmpDir();
+    const help = runCli(cwdHelp, ["start"], `${flag}\n`);
+    check(
+      `${flag} ⇒ exit 0 并打印用法`,
+      help.code === 0 && help.stdout.includes("Ralph 循环用法") && help.stdout.includes("--max-iterations"),
+      `exit=${help.code} stdout=${JSON.stringify(help.stdout.slice(0, 60))}`,
+    );
+    check(`${flag} ⇒ 不创建状态文件`, readState(cwdHelp) === null);
+  }
+
+  // 已有循环时 --help 仍然只打用法，不动状态文件
+  const cwdBusy = tmpDir();
+  writeState(cwdBusy, { iteration: 1, maxIterations: 5, completionPromise: "", sessionId: "s1" }, PROMPT);
+  const before = readState(cwdBusy);
+  const helpBusy = runCli(cwdBusy, ["start"], "--help\n");
+  check(
+    "已有循环时 --help 仍打用法且不动状态文件",
+    helpBusy.code === 0 && helpBusy.stdout.includes("Ralph 循环用法") && readState(cwdBusy) === before,
+    `exit=${helpBusy.code}`,
+  );
 }
 
 // ── 汇总 ─────────────────────────────────────────────────────

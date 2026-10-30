@@ -16,7 +16,12 @@ allowed-tools:
 
 ```
 /ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]
+/ralph-loop:ralph-loop --help
 ```
+
+`--max-iterations N` 的含义是「总共跑 N 轮（含首个回合）」，即 N-1 次回喂，
+与 Claude Code 的 ralph-loop 一致：`1` = 一次都不喂回（prompt 不会被执行），
+`0` 或省略 = 不限轮。首个真正干活的回合，提示行显示的是「第 2 轮」。
 
 先把状态写进 `.wave/ralph-loop.local.md`：
 
@@ -30,11 +35,13 @@ WAVE_RALPH_ARGS
 
 - 上面那行**已经执行完了**，它的输出就是结果。不要再自己调 `Bash` / `Glob` / `Read` 去
   复核 `.wave/ralph-loop.local.md`（`.wave` 是隐藏目录，文件工具看不到它）。
+- 输出以 `📖` 开头 ⇒ 用户是在问用法。把这段用法**原样转述**给用户，然后停下，
+  不要启动循环、也不要开始做任何工作。
 - 输出以 `❌` 开头 ⇒ **循环没有启动**。把错误原样告诉用户，然后停下，
   不要开始执行任何工作。
 - 输出以 `✅` 开头 ⇒ 循环已就绪。**这一轮不要做 prompt 里的任何工作**，只回复
-  一行「Ralph 循环已就绪」就结束回合 —— Stop hook 会立刻把第 1 轮的 prompt 送进来，
-  从第 1 轮开始干活。
+  一行「Ralph 循环已就绪」就结束回合 —— Stop hook 会立刻把第一轮活儿的 prompt
+  送进来（提示行写的是「第 2 轮」，因为启动命令这个回合就是第 1 轮），从那时开始干活。
 
 ## 循环里的行为约定
 

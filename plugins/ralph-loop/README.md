@@ -20,6 +20,12 @@
                           └─ 循环，直到命中 <promise>…</promise> / 到上限 / 手动取消
 ```
 
+轮次语义刻意与 CC 的 `setup-ralph-loop.sh` + `stop-hook.sh` 对齐：状态文件里的
+`iteration` 是「当前回合序号」，启动时就是 `1`；Stop hook 在自增**之前**判
+`iteration >= max_iterations`，否则写回 `iteration + 1`，并把**新**序号写进提示行
+（第一次回喂显示「第 2 轮」，同 CC 的 `Ralph iteration 2`）。所以
+`--max-iterations N` = 总共 N 个回合（含首回合）= `N-1` 次回喂。
+
 wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 
 - Stop hook 的「阻止停止 + 继续对话」= `process.stderr.write(text)` + `process.exit(2)`
@@ -44,8 +50,26 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 ```
 
 - `<prompt>`：原样保存、原样喂回，一字不改。可以带引号、`$`、`;`、`&&`、换行、反引号。
-- `--max-iterations N`：最多喂回 N 轮，到点自动停。**不给就是不限轮**。
+- `--max-iterations N`：**最多跑 N 轮（含首个回合）**，也就是最多喂回 `N-1` 次，到点自动停。
+  `0` 或不给 = 不限轮。语义与 Claude Code 的 ralph-loop 一致。
 - `--completion-promise TEXT`：模型输出 `<promise>TEXT</promise>` 时循环结束（逐字比较）。
+- `--help` / `-h`：打印用法并退出，不会启动循环、不写状态文件。
+
+轮次怎么数（和 CC 对齐，别搞混）：
+
+| 参数 | 总共跑 | 喂回次数 | 提示行依次是 |
+|---|---|---|---|
+| `--max-iterations 1` | 1 轮 | 0 | （不会出现） |
+| `--max-iterations 2` | 2 轮 | 1 | 第 2 轮 |
+| `--max-iterations 5` | 5 轮 | 4 | 第 2、3、4、5 轮 |
+| 不给 / `0` | 不限 | 不限 | 第 2、3、4… 轮 |
+
+两个容易踩的点：
+
+- **第 1 轮是「启动命令那个回合」本身**（模型只回一句「Ralph 循环已就绪」就结束），
+  真正干活的第一个回合在提示行里显示的是「第 2 轮」—— 和 CC 的 `Ralph iteration 2` 一致。
+- 所以 `--max-iterations 1` 等价于**一次都不喂回**，prompt 根本不会被执行（CC 同样如此）。
+  想跑 1 次活请用 `--max-iterations 2`。
 
 例子：
 
@@ -97,6 +121,8 @@ session_id: "0f3c…"
 - **会话隔离**：`session_id` 与 Stop hook 输入里的 `session_id` 不一致时直接放行，
   同一项目里别的会话不会被这个循环卡住。启动时拿不到会话 id，所以先写空串，
   由本会话第一次 Stop hook 认领并写回。
+- **`iteration` 的含义是「当前回合序号」，启动时写 `1`**（首个回合算第 1 轮，与 CC 一致），
+  不是「已回喂次数」。别把它当计数器从 0 起算，会让 `--max-iterations` 整体差一轮。
 - **iteration 原子更新**：写临时文件再 `rename`，避免 hook 与命令并发时读到半个文件。
 - **脏文件即停**：`iteration` / `max_iterations` 不是非负整数、正文为空、frontmatter
   读不出来 ⇒ 删文件 + 放行。宁可停，也不要拿着看不懂的状态死循环。
@@ -120,7 +146,8 @@ node plugins/ralph-loop/scripts/self-test.mjs
 直接跑真实的 hook 与 CLI 进程（不 mock），覆盖：没有状态文件、session 不匹配、脏文件、
 到上限、完成标记命中、未命中继续（含 iteration 递增与 prompt 原样喂回）、参数经 stdin
 传输的逐字完整性（引号 / `$` / `;` / `&&` / 单引号 / 换行 / 反引号）、会话认领、
-重复启动、cancel。
+重复启动、cancel，以及**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 一次都不喂回、
+`--help` 不写状态文件）。
 
 ## 实现说明（为什么入口是 skill 而不是 commands/*.md）
 

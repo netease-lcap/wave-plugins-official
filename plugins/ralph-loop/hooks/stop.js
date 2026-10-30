@@ -103,9 +103,7 @@ function main() {
     case "complete":
       deleteStateFile(resolved.cwd);
       announce(
-        `Ralph 循环已完成：命中完成条件 <promise>${result.promise}</promise>${
-          result.iteration > 0 ? `（第 ${result.iteration} 轮）` : "（启动这一回合就满足了）"
-        }。`,
+        `Ralph 循环已完成：命中完成条件 <promise>${result.promise}</promise>（第 ${result.iteration} 轮）。`,
       );
       return;
 

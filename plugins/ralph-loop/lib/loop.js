@@ -12,6 +12,16 @@
  *   4. 到达 iteration 上限 → 删文件 + 播报 + 放行
  *   5. 完成标记命中        → 删文件 + 播报 + 放行
  *   6. 其余                → iteration+1 写回 + 把 prompt 喂回去（继续）
+ *
+ * 轮次语义与 Claude Code 的 stop-hook.sh 逐字对齐：
+ *
+ *   - `iteration` 是「当前这一回合的序号」，启动时就是 1（首个回合算第 1 轮）；
+ *   - 判据在自增**之前**：`iteration >= max_iterations` ⇒ 收尾，不再喂回；
+ *   - 否则 `iteration + 1` 写回，并把 **新** 序号写进提示行（第一次回喂显示「第 2 轮」，
+ *     同 CC 的 `Ralph iteration $NEXT_ITERATION`）。
+ *
+ * 所以 `--max-iterations N` = 总共 N 个回合（含首回合）= N-1 次回喂。
+ * 别把 iteration 的起点改成 0 —— 那会让同一个 N 多喂一轮，与 CC 不兼容。
  */
 
 const CANCEL_COMMAND = "/ralph-loop:cancel-ralph";
@@ -121,7 +131,8 @@ function evaluate(input) {
     meta.completion_promise == null ? "" : meta.completion_promise,
   );
 
-  // 4. 上限。max_iterations = 0 表示不限（靠 completion_promise 或手动取消收尾）。
+  // 4. 上限。判据在自增之前，且 iteration 是「本回合序号」——所以 max_iterations = 1
+  //    表示只跑 1 轮、一次都不喂回（与 CC 一致）。0 表示不限。
   if (maxIterations > 0 && iteration >= maxIterations) {
     return { action: "limit", iteration, maxIterations };
   }
@@ -136,6 +147,7 @@ function evaluate(input) {
   }
 
   // 6. 继续：轮次 +1 写回，正文 = 提示行 + 原始 prompt。
+  //    提示行里的序号用**下一个**回合号（第一次回喂就是「第 2 轮」）。
   const nextIteration = iteration + 1;
   return {
     action: "continue",

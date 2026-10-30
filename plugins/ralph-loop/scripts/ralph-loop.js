@@ -10,6 +10,10 @@
  *
  *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" cancel
  *
+ *   node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start <<'WAVE_RALPH_ARGS'
+ *   --help
+ *   WAVE_RALPH_ARGS
+ *
  * 为什么参数走 stdin 而不是命令行参数：wave 对 `$ARGUMENTS` 是**原文替换、不加
  * 引号不转义**，prompt 里出现 `"`、`'`、`$`、`;`、`&&`、反引号都会被 shell 重
  * 新解析（甚至被当成要执行的命令）。所以整段文本经带引号的 heredoc 原样送进
@@ -29,9 +33,81 @@ const { CANCEL_COMMAND } = require("../lib/loop.js");
 const DEFAULT_MAX_ITERATIONS = 0; // 0 = 不限轮，靠完成标记或手动取消收尾
 const MAX_PROMPT_CHARS = 200000;
 
+/**
+ * 轮次语义（刻意与 Claude Code 的 setup-ralph-loop.sh 对齐）：
+ *
+ *   状态文件里的 `iteration` = **已经进入的回合号**，启动时就写 1（首个回合算第 1 轮）。
+ *   Stop hook 的判据是「自增之前」的 `iteration >= max_iterations` ⇒ 拦下 + 收尾；
+ *   否则写回 `iteration + 1` 并再喂一次。
+ *
+ * 于是 `--max-iterations N` = 总共 N 个回合（含首回合）= N-1 次回喂：
+ *   - N = 1：首回合结束就停，0 次回喂；
+ *   - N = 2：喂回 1 次，共 2 轮（第 2 轮的提示行写「第 2 轮」，同 CC 的 `Ralph iteration 2`）；
+ *   - N = 0：不限轮。
+ *
+ * 曾经写成 `iteration: 0`，那会让同一个 N 多跑一轮（N 次回喂 = N+1 个回合），与 CC 不一致。
+ */
+const INITIAL_ITERATION = 1;
+
+const USAGE_LINES = [
+  "📖 Ralph 循环用法",
+  "",
+  "把同一段 prompt 一轮一轮喂回同一个会话，靠文件系统与 git 历史累积进度，",
+  "直到模型输出完成标记（或到达轮次上限）。",
+  "",
+  "用法：",
+  "  /ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]",
+  "  /ralph-loop:ralph-loop --help | -h",
+  "  /ralph-loop:cancel-ralph",
+  "",
+  "参数：",
+  "  <prompt>                  要反复喂回去的任务。原样保存、原样喂回，可以带引号、$、;、&&、换行。",
+  "  --max-iterations N        最多跑 N 轮（含首个回合，与 Claude Code 同语义）。0 = 不限轮，默认 0。",
+  "  --completion-promise TEXT 模型输出 <promise>TEXT</promise> 时结束（归一空白后逐字比较）。",
+  "",
+  "轮次怎么数：",
+  "  --max-iterations 1  ⇒ 不喂回任何一次（第 1 轮就是启动命令本身那个回合，prompt 不会被执行）；",
+  "  --max-iterations 2  ⇒ 喂回 1 次，共 2 轮；",
+  "  --max-iterations 0  ⇒ 不限轮。",
+  "",
+  "例子：",
+  "  /ralph-loop:ralph-loop 把 tests/ 下失败的用例逐个修到 npm test 全绿 --max-iterations 8",
+  "  /ralph-loop:ralph-loop 重构到 tsc --noEmit 干净 --max-iterations 5 --completion-promise TSC CLEAN",
+  "",
+  "怎么取消：",
+  "  /ralph-loop:cancel-ralph  删除状态文件，当前回合结束后不再喂回。",
+  "  Esc 只是立刻停下，状态文件还在，下次结束回合时循环会被重新接上 —— 想彻底停请用 cancel。",
+  "",
+  "状态文件：<cwd>/.wave/ralph-loop.local.md（运行时状态，建议加进 .gitignore）。",
+  "",
+];
+
+function printHelp() {
+  process.stdout.write(`${USAGE_LINES.join("\n")}\n`);
+}
+
 function fail(message) {
   process.stdout.write(`❌ Ralph 循环没有启动：${message}\n`);
   process.exit(1);
+}
+
+function readStdin() {
+  try {
+    return require("fs").readFileSync(0, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * 有没有 `--help` / `-h`。
+ *
+ * 只认「独立 token」形态（行首或空白之后、空白或行尾之前），和下面 takeFlag 的
+ * 边界规则一致。这里刻意只特判这一个 flag：**其余不认识的字样一律算 prompt 正文**，
+ * 与 CC 的 setup 脚本行为一致 —— 不能因为出现了未知 flag 就把用户的 prompt 拒掉。
+ */
+function hasHelpFlag(text) {
+  return /(?:^|\s)(?:--help|-h)(?=\s|$)/.test(String(text == null ? "" : text));
 }
 
 /**
@@ -109,7 +185,9 @@ function parseStartInput(raw) {
 
   const prompt = rest.replace(/^\n+/, "").replace(/\s+$/, "");
   if (!prompt.trim()) {
-    fail("没有 prompt。用法：/ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]");
+    fail(
+      "没有 prompt。用法：/ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]（细节见 /ralph-loop:ralph-loop --help）",
+    );
   }
   if (prompt.length > MAX_PROMPT_CHARS) {
     fail(`prompt 太长（${prompt.length} 字符，上限 ${MAX_PROMPT_CHARS}）`);
@@ -119,18 +197,20 @@ function parseStartInput(raw) {
 }
 
 function start(cwd) {
+  const input = readStdin();
+
+  // `--help` 要在「已有循环」检查之前处理：用户只是想看用法，不该被状态文件挡住，
+  // 更不该被当成 prompt 正文真的起一个循环（CC 的 setup 脚本同样是先打用法再 exit 0）。
+  if (hasHelpFlag(input)) {
+    printHelp();
+    return;
+  }
+
   const existing = readStateFile(cwd);
   if (existing !== null) {
     fail(
       `这个项目里已经有一个 Ralph 循环了（${STATE_REL_PATH}）。先 ${CANCEL_COMMAND} 再启动新的。`,
     );
-  }
-
-  let input;
-  try {
-    input = require("fs").readFileSync(0, "utf8");
-  } catch {
-    input = "";
   }
 
   const { prompt, maxIterations, completionPromise } = parseStartInput(input);
@@ -139,7 +219,8 @@ function start(cwd) {
     cwd,
     formatStateText(
       {
-        iteration: 0,
+        // 首个回合就是第 1 轮（与 CC 对齐），不是 0。
+        iteration: INITIAL_ITERATION,
         maxIterations,
         completionPromise,
         // 会话 id 到这里拿不到（命令不留会话上下文），由本会话的第一次
@@ -153,10 +234,19 @@ function start(cwd) {
   const lines = [
     "✅ Ralph 循环已就绪",
     `- 状态文件：${STATE_REL_PATH}`,
-    `- 迭代上限：${maxIterations > 0 ? `${maxIterations} 轮` : "不限（靠完成标记或手动取消收尾）"}`,
+    `- 轮次上限：${
+      maxIterations > 0
+        ? `${maxIterations} 轮（含首个回合；即最多喂回 ${maxIterations - 1} 次）`
+        : "不限（靠完成标记或手动取消收尾）"
+    }`,
     `- 完成条件：${completionPromise ? `<promise>${completionPromise}</promise>` : "未设"}`,
     `- prompt 正文：${prompt.length} 字符（逐字保存，未做任何改写）`,
   ];
+  if (maxIterations === 1) {
+    lines.push(
+      "- 上限是 1 轮：不会喂回任何一次，prompt 不会被真正执行（想跑 1 次活请用 --max-iterations 2）",
+    );
+  }
   if (maxIterations === 0) {
     lines.push(
       `- ⚠️ 没有设上限：这个循环只会在输出完成标记或你 ${CANCEL_COMMAND} 时停下`,
@@ -179,11 +269,14 @@ function main() {
   // 内联命令的 cwd 就是会话 workdir，也就是状态文件该待的地方。
   const cwd = process.cwd();
 
+  // 直接跑脚本时也能看用法（`node ralph-loop.js --help`）。
+  if (action === "--help" || action === "-h") return printHelp();
+
   if (action === "start") return start(cwd);
   if (action === "cancel") return cancel(cwd);
 
   fail(
-    `未知子命令「${action || "(空)"}」。用法：ralph-loop.js start|cancel（start 从 stdin 读 prompt）`,
+    `未知子命令「${action || "(空)"}」。用法：ralph-loop.js start|cancel（start 从 stdin 读 prompt），查看用法加 --help`,
   );
 }
 
