@@ -1,0 +1,5 @@
+{
+  "name": "ralph-loop",
+  "description": "Ralph 循环：把同一段 prompt 反复喂回 agent，靠文件系统与 git 历史累积迭代，直到它输出完成标记或到达迭代上限",
+  "version": "1.0.0"
+}

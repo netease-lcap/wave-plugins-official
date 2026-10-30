@@ -73,6 +73,11 @@
       "name": "security-audit",
       "description": "按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动（分支 diff、PR 的 ref 对、单个提交）/ 出补丁；多 agent 扫描 + 每条发现独立复核后落盘报告，补丁由人拍板应用",
       "source": "./plugins/security-audit"
+    },
+    {
+      "name": "ralph-loop",
+      "description": "Ralph 循环：Stop hook 拦下退出，把同一段 prompt 反复喂回同一会话，靠文件系统与 git 历史累积迭代，直到输出完成标记或到达迭代上限",
+      "source": "./plugins/ralph-loop"
     }
   ]
 }
