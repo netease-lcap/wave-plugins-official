@@ -24,8 +24,13 @@ allowed-tools:
 先把状态写进 `.wave/ralph-loop.local.md`：
 
 ```!
-node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start --args-file "${WAVE_ARGUMENTS_FILE}"
+node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start $ARGUMENTS
 ```
+
+`$ARGUMENTS` 不加引号交给 shell 是**刻意**的：与 Claude Code 的
+`setup-ralph-loop.sh` 一致，参数先经 shell 分词，再由脚本按 flag 拆。所以
+`--completion-promise "ALL TESTS PASS"` 里的引号会被剥掉、成为一个参数；
+prompt 里的多余空白会被折叠成单个空格。
 
 ## 接下来怎么做
 

@@ -3,19 +3,14 @@
 /**
  * Ralph 循环的 Stop hook。
  *
- * 契约（wave agent-sdk）：
+ * 契约（wave agent-sdk，与 Claude Code 同形）：
  * - stdin 是一个 JSON：{session_id, transcript_path, cwd, hook_event_name,
- *   last_assistant_message}，Stop 事件独有 last_assistant_message；
- * - `process.stderr.write(text)` + `process.exit(2)` = 阻止停止，stderr 作为一条
- *   meta user message 注入会话后重开一轮（模型看得到，UI 不显示）；
- * - `exit 0` = 放行，正常结束这一回合；
- * - stdout 打一行 `{"systemMessage": "..."}` = 在对话里给**用户**显示一行提示
- *   （模型看不到）。exit 0 / exit 2 都认这个字段。
+ *   last_assistant_message, stop_hook_active, permission_mode}；
+ * - stdout 打一行 `{"decision":"block","reason":"<原样 prompt>","systemMessage":"..."}`
+ *   并 `exit 0` = 拦住停止：`reason` 作为一条 meta user message 注入会话后重开一轮
+ *   （模型看得到，UI 不显示），`systemMessage` 是同一份 JSON 里给**用户**看的一行；
+ * - 其余情况 `exit 0` = 放行，正常结束这一回合；收尾播报同样走 `systemMessage`；
  * - 用户按 Esc 中断时引擎根本不执行 Stop hook，所以这里不需要写中断判据。
- *
- * 两套播报渠道各管一头，不要混：模型只认 exit 2 的 stderr，用户只认 stdout 的
- * `systemMessage`。stdout 那行对老客户端（不认识 `systemMessage` 的版本）是纯噪音
- * ——它们整个忽略 Stop hook 的 stdout，所以 exit code 与回喂契约必须一个字都不动。
  *
  * 因此：本 hook 只做「读状态 → 判定 → 写回 / 收尾」，所有判定逻辑与文案在
  * lib/loop.js 里（纯函数，自测直接覆盖）。
@@ -59,14 +54,14 @@ function resolveCwd(input) {
 
 /**
  * 往 stdout 打一行 `{"systemMessage": ...}`：wave 会在对话里把这条文案显示给用户
- * （模型看不到它）。写在 stdout 而不是塞进 exit 2 的 stderr，是因为两者受众不同：
- * stderr 是喂给模型的正文，`systemMessage` 是给用户的状态播报。
+ * （模型看不到它）。它与 `reason` 是两个受众：`reason` 喂给模型，`systemMessage`
+ * 是给用户的状态播报。
  */
 function emitSystemMessage(message) {
   try {
     process.stdout.write(`${JSON.stringify({ systemMessage: message })}\n`);
   } catch {
-    // 播报失败不影响判定结果（尤其不能影响 exit 2 的回喂）
+    // 播报失败不影响判定结果（尤其不能影响 decision:block 的回喂）
   }
 }
 
@@ -143,11 +138,16 @@ function main() {
           parsed.body.replace(/\s+$/, ""),
         ),
       );
-      // 回喂契约：stderr + exit 2，一个字都不能动（老客户端就靠它继续循环）。
-      process.stderr.write(`${result.header}\n\n${result.prompt}\n`);
-      // 用户那一行是额外增量，与上面这行的先后顺序无关。
-      emitSystemMessage(result.systemMessage);
-      process.exit(2);
+      // 回喂：`{"decision":"block","reason":<原样 prompt>}` + exit 0 —— 与 Claude
+      // Code 的 stop-hook 同一条通道。reason 不加任何前缀：模型每轮看到的是同一段
+      // 话，进度全在文件与 git 里；轮次号和怎么停写在 systemMessage 里给用户。
+      process.stdout.write(
+        `${JSON.stringify({
+          decision: "block",
+          reason: result.prompt,
+          systemMessage: result.systemMessage,
+        })}\n`,
+      );
       return;
     }
 
