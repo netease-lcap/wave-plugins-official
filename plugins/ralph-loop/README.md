@@ -17,7 +17,7 @@
         │
         └─ agent 干完一轮想停
               └─ Stop hook 拦下：iteration+1 写回，把「第 N 轮提示行 + 原始 prompt」
-                 写到 stderr 并 exit 2
+                 写到 stderr 并 exit 2（同时往 stdout 打一行 systemMessage 给你看）
                     └─ wave 把 stderr 作为一条 meta user message 注入会话，重开一轮
                           └─ 循环，直到命中 <promise>…</promise> / 到上限 / 手动取消
 ```
@@ -32,13 +32,16 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 
 - Stop hook 的「阻止停止 + 继续对话」= `process.stderr.write(text)` + `process.exit(2)`
   （`managers/hookManager.ts` 的 `handleBlockingError` / `managers/aiManager.ts` 的
-  `executeStopHooks` 的 `shouldRestart`）。
+  `executeStopHooks` 的 `shouldRestart`）。wave 没有 CC 的 `decision: "block"` 通道，
+  这条路是唯一能让**模型**读到新内容的方式，所以「第几轮 / 怎么退出」必须拼进喂回去的正文。
 - Stop hook 的 stdin 是 JSON，其中 `last_assistant_message` 是最后一条 assistant 的纯文本，
   所以判完成标记直接读它，**不用解析 transcript**。
 - 用户按 `Esc` 中断时引擎根本不执行 Stop hook，所以「中断即停」是白送的，hook 里不需要
   写中断判据。
-- wave 没有 CC 的 `systemMessage` 字段：每轮「第几轮 / 怎么结束」必须拼进喂回去的正文，
-  否则模型既不知道自己在循环里，也不知道怎么退出。
+- Stop hook 的 stdout 里写 `{"systemMessage": "..."}` = 在对话里给**用户**显示一行提示
+  （模型看不到，与 CC 同名字段同语义）。它和 exit 2 的 stderr 是两条互不相干的通道：
+  stderr 喂模型，`systemMessage` 给用户。老客户端整个忽略 Stop hook 的 stdout，所以这
+  一行在新老版本上都不会改变循环行为（详见「播报可见性」）。
 
 ## 用法
 
@@ -101,6 +104,33 @@ setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC �
 > 或按 `Esc` 中断才会停。按 `Esc` 是立刻停下（引擎不跑 Stop hook），但状态文件还在，
 > 下次这个会话结束回合时循环会被重新接上 —— 想彻底停就用 cancel 命令。
 
+## 挂后台跑之前
+
+Ralph 循环想的是「无人值守跑 N 轮」，但**权限门仍然逐次拦**——这一点插件绕不过去，
+先看清楚再让它跑：
+
+1. **默认（`default` / `plan`）权限模式下，每一轮里模型自己的工具调用照样会弹权限窗。**
+   循环只负责把 prompt 喂回去，管不到模型这一轮要调什么；一轮里模型调 10 次工具，你
+   就得点 10 次（不同轮之间也一样）。想真的无人值守，启动时把权限模式换成
+   `acceptEdits`（自动接受文件编辑）或 `bypassPermissions`（全放行，慎用）——这是真机
+   实测行为，不是插件的 bug，也不是 hook 能替用户点掉的。留在默认模式跑长循环，你会
+   守在一堆权限窗前面，循环还会因为某次拒绝而空转。（`dontAsk` 并不更好：它不弹窗，
+   但直接把没被规则放行的工具**自动拒绝**掉，循环会在同一处反复失败。）
+2. **把 `.wave/` 加进项目的 `.gitignore`。** 循环期间会有一个未跟踪的
+   `.wave/ralph-loop.local.md`（每轮都在改），不 ignore 的话它会一直挂在 `git status`
+   里，还容易被顺手 `git add` 进去：
+
+   ```gitignore
+   # ralph-loop 的运行时状态
+   .wave/
+   ```
+
+   （只想忽略状态文件本身、保留 `.wave/` 下别的东西，就写 `.wave/ralph-loop.local.md`。）
+
+循环本身不常驻任何进程：它靠 Stop hook 触发，你把会话晾着就行，不用守着终端。
+但「无人值守」和「每一步都能审」是互斥的两件事 —— 要后者就留在默认权限模式，
+接受那一堆权限窗。
+
 ## 与 CC（Claude Code ralph-loop）的差异
 
 默认一切以 CC 为准：参数语义（N = 总回合数）、首回合就干活、`--help`/`-h`、
@@ -113,7 +143,8 @@ setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC �
 | 支持 `--max-iterations=10` 等号形式 | 更符合 Unix 习惯；CC 的解析循环会把它当 prompt 正文（等于悄悄不设上限）。等号形式只是**多支持**一种写法，`--flag value` 的语义完全同 CC |
 | 已有循环时**拒绝启动**，要求先 `/ralph-loop:cancel-ralph` | CC 是静默覆盖状态文件，会把正在跑的循环冲掉、且不告诉你旧 prompt 丢了 |
 | 多行 prompt **原样保留换行** | CC 会把多行塌成一行，结构化 prompt（清单、代码块）会被毁掉 |
-| Stop hook 用 `exit 2` + stderr，不是 `{"decision":"block"}` JSON | wave 的 hook 协议没有 `systemMessage` / `decision` 通道；「第几轮 / 怎么退出」只能折进喂回去的正文 |
+| 拦停用 `exit 2` + stderr，不是 `{"decision":"block","reason":…}` + `exit 0` | wave 的 Stop hook 只有 exit 2 会把 stderr 喂回模型（`decision` 字段不认）。CC 那套 `exit 0` + JSON 在 wave 上等于放行，循环会静默停下。这条同时保证老客户端（≤ 1.5.1）行为与 1.1.0 完全一致 |
+| 给用户的播报是「**额外**在 stdout 打一行 `{"systemMessage": …}`」，不是与 decision 同一个 JSON 对象 | 拦停通道已经占用了 exit 2 + stderr（见上一行），所以播报只能是**另加**的一行：stdout 写 `systemMessage`，退出码与 stderr 一个字不动。CC 里两者共用一个 `{decision, reason, systemMessage}` 对象，是因为它 exit 0 拦停、不靠退出码 |
 | 命令名是 `/ralph-loop:ralph-loop` 而不是 `/ralph-loop` | wave 里插件贡献的斜杠命令一律带插件名前缀 |
 | prompt 里的引号**原样保留**（CC 按 shell 规则剥掉成对引号：`"Fix it"` → `Fix it`） | CC 的参数拼进 shell，引号是语法；wave 的参数经 `${WAVE_ARGUMENTS_FILE}` 走文件，引号就是用户写下的正文字符，剥掉反而是改用户的话 |
 
@@ -155,16 +186,24 @@ session_id: "0f3c…"
 - **iteration 原子更新**：写临时文件再 `rename`，避免 hook 与命令并发时读到半个文件。
 - **脏文件即停**：`iteration` / `max_iterations` 不是非负整数、正文为空、frontmatter
   读不出来 ⇒ 删文件 + 放行。宁可停，也不要拿着看不懂的状态死循环。
-- 想要的话可以把 `.wave/ralph-loop.local.md` 写进 `.gitignore`：它是运行时状态，
-  不是配置。
+- `.wave/` 建议直接进 `.gitignore`（循环期间会多出一个未跟踪的状态文件，
+  见「挂后台跑之前」）：它是运行时状态，不是配置。
 
-## 两个已知的表现限制
+## 播报可见性（谁看到哪一句）
 
-1. **循环结束时的播报只进日志**：wave 的 Stop hook 只有 `exit 2` 能被模型看到，`exit 0`
-   的 stderr 不会进对话。所以「已到 N 轮上限」「命中完成条件」「状态文件不合法」这些
-   收尾信息写在 hook 日志里（`~/.wave/logs/`），用户界面上看到的是「这一轮正常结束了」。
-2. **每轮喂回去的提示行对用户不可见**：它是 `isMeta` 的 user message，模型看得到
-   （因此知道自己处在循环里），UI 不展示。第 1 轮本来就没有这行（它就是你敲命令那一轮）。
+两条通道各管一头，别指望它们互换：
+
+| 场景 | 用户看到 | 模型看到 |
+|---|---|---|
+| 每轮继续（`exit 2`） | stdout 的一行 `systemMessage`：`🔄 Ralph 第 N 轮 \| 想停：…` | exit 2 的 stderr：「第 N 轮提示行 + 原始 prompt」 |
+| 收尾（到上限 / 命中完成条件 / 脏文件 / hook 异常） | stdout 的一行 `systemMessage`：`Ralph 循环已结束…` | 什么也看不到（`exit 0`，正常结束这一回合） |
+
+- 喂回去的那条 meta user message 本身对用户仍然隐藏（`isMeta`，UI 不展示）；
+  `systemMessage` 是**另加**的一行，不是把它显示出来。
+- `systemMessage` 需要较新的 wave（Stop hook 识别 stdout 的这个字段之后）。老客户端
+  整个忽略 Stop hook 的 stdout，那些版本上的表现仍然是「播报只进 `~/.wave/logs/`
+  日志，界面上是『这一轮正常结束了』」，循环本身不受影响。
+- 收尾那行同时写进了 stderr（hook 日志），所以事后也能在 `~/.wave/logs/` 里查到。
 
 ## 自测
 
@@ -177,8 +216,12 @@ node plugins/ralph-loop/scripts/self-test.mjs
 `--args-file` 的完整性（引号、`$`、反引号、`;`、`&&` 都不丢也不执行、多行仍保留换行、
 `$(…)` 不被当命令）、重复 flag 取最后一个、等号形式 `--max-iterations=10`、
 缺 `--args-file` 时报错、会话认领、重复启动、cancel，
-以及**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 首回合就干活且零回喂、
-`--help` 不写状态文件）。
+**与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 首回合就干活且零回喂、
+`--help` 不写状态文件），以及 **`systemMessage` 的播报**（continue / 收尾两路 stdout
+都是合法 JSON、轮次号对得上、没设完成条件时不出现 `<promise>`、且不影响 exit code）。
+
+用例跑在 `mkdtempSync` 建的临时目录里，整段包在 `try/finally` 中统一 `rmSync` 删除 ——
+断言失败或抛异常也不会在 `/tmp` 里留垃圾。
 
 ## 实现说明（参数怎么进来）
 

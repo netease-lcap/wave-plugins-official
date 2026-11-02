@@ -9,9 +9,15 @@
  * - `process.stderr.write(text)` + `process.exit(2)` = 阻止停止，stderr 作为一条
  *   meta user message 注入会话后重开一轮（模型看得到，UI 不显示）；
  * - `exit 0` = 放行，正常结束这一回合；
+ * - stdout 打一行 `{"systemMessage": "..."}` = 在对话里给**用户**显示一行提示
+ *   （模型看不到）。exit 0 / exit 2 都认这个字段。
  * - 用户按 Esc 中断时引擎根本不执行 Stop hook，所以这里不需要写中断判据。
  *
- * 因此：本 hook 只做「读状态 → 判定 → 写回 / 收尾」，所有判定逻辑在
+ * 两套播报渠道各管一头，不要混：模型只认 exit 2 的 stderr，用户只认 stdout 的
+ * `systemMessage`。stdout 那行对老客户端（不认识 `systemMessage` 的版本）是纯噪音
+ * ——它们整个忽略 Stop hook 的 stdout，所以 exit code 与回喂契约必须一个字都不动。
+ *
+ * 因此：本 hook 只做「读状态 → 判定 → 写回 / 收尾」，所有判定逻辑与文案在
  * lib/loop.js 里（纯函数，自测直接覆盖）。
  */
 
@@ -51,13 +57,27 @@ function resolveCwd(input) {
   return { cwd: candidates[0] || process.cwd(), found: false };
 }
 
-/** 收尾时的播报：Stop hook 只有 exit 2 能被模型看到，exit 0 的 stderr 只进日志。 */
+/**
+ * 往 stdout 打一行 `{"systemMessage": ...}`：wave 会在对话里把这条文案显示给用户
+ * （模型看不到它）。写在 stdout 而不是塞进 exit 2 的 stderr，是因为两者受众不同：
+ * stderr 是喂给模型的正文，`systemMessage` 是给用户的状态播报。
+ */
+function emitSystemMessage(message) {
+  try {
+    process.stdout.write(`${JSON.stringify({ systemMessage: message })}\n`);
+  } catch {
+    // 播报失败不影响判定结果（尤其不能影响 exit 2 的回喂）
+  }
+}
+
+/** 收尾时的播报：stdout 给用户看，stderr 照旧写进 hook 日志。 */
 function announce(message) {
   try {
     process.stderr.write(`${message}\n`);
   } catch {
     // 播报失败不影响「停下来」这个结果
   }
+  emitSystemMessage(message);
 }
 
 function main() {
@@ -123,7 +143,10 @@ function main() {
           parsed.body.replace(/\s+$/, ""),
         ),
       );
+      // 回喂契约：stderr + exit 2，一个字都不能动（老客户端就靠它继续循环）。
       process.stderr.write(`${result.header}\n\n${result.prompt}\n`);
+      // 用户那一行是额外增量，与上面这行的先后顺序无关。
+      emitSystemMessage(result.systemMessage);
       process.exit(2);
       return;
     }

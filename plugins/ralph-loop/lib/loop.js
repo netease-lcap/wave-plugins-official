@@ -55,9 +55,9 @@ function parseUnsigned(value) {
 /**
  * 喂回去的正文开头那一行。
  *
- * wave 没有 CC 的 `systemMessage` 通道，Stop hook 唯一能让模型看见的通道就是
- * exit 2 的 stderr，所以「第几轮 / 怎么结束」必须写进正文本身，否则模型既不知道
- * 自己处在循环里，也不知道该怎么退出。
+ * 这一行是给**模型**看的（exit 2 的 stderr），所以「第几轮 / 怎么结束」必须写进
+ * 正文本身，否则模型既不知道自己处在循环里，也不知道该怎么退出。
+ * 给**用户**看的那一行是另一份文案，见 buildSystemMessage。
  */
 function buildIterationHeader(iteration, { maxIterations, completionPromise }) {
   const parts = [`🔄 Ralph 第 ${iteration} 轮`];
@@ -79,6 +79,26 @@ function buildIterationHeader(iteration, { maxIterations, completionPromise }) {
 }
 
 /**
+ * 「这一轮又转下去了」时给**用户**看的那一行（Stop hook 打到 stdout 的
+ * `systemMessage`，模型看不到它 —— 模型那边只有 buildIterationHeader 那份 stderr）。
+ *
+ * 所以它只回答用户关心的两件事：现在是第几轮、怎么停。复述 prompt 正文没有意义
+ * （正文在 stderr 里，而且可能很长）。
+ */
+function buildSystemMessage(iteration, { maxIterations, completionPromise }) {
+  const prefix = `🔄 Ralph 第 ${iteration} 轮`;
+  const promise = normalizePromiseText(completionPromise);
+  if (promise) {
+    return `${prefix} | 想停：${CANCEL_COMMAND}，或输出 <promise>${promise}</promise>（只有真的达成才输出）`;
+  }
+  // 没设完成条件时，文案里一个 `<promise>` 都不能出现：那会让人以为写了就能停。
+  if (maxIterations > 0) {
+    return `${prefix} | 未设完成条件，会跑到第 ${maxIterations} 轮上限；想停：${CANCEL_COMMAND}`;
+  }
+  return `${prefix} | 未设完成条件，会一直跑；想停：${CANCEL_COMMAND}`;
+}
+
+/**
  * 判定本回合该不该停下来。
  *
  * @param {object} input
@@ -91,7 +111,7 @@ function buildIterationHeader(iteration, { maxIterations, completionPromise }) {
  *   - {action:"dirty", reason}                    删文件 + 播报 + exit 0
  *   - {action:"limit", iteration, maxIterations}  到上限
  *   - {action:"complete", promise}                完成标记命中
- *   - {action:"continue", iteration, header, prompt, adoptSession} 继续
+ *   - {action:"continue", iteration, header, systemMessage, prompt, adoptSession} 继续
  */
 function evaluate(input) {
   const { meta, body, sessionId, lastAssistantMessage } = input;
@@ -156,6 +176,11 @@ function evaluate(input) {
       maxIterations,
       completionPromise,
     }),
+    // 给用户看的那一行用同一个轮次号，两处不能对不上
+    systemMessage: buildSystemMessage(nextIteration, {
+      maxIterations,
+      completionPromise,
+    }),
     prompt,
     adoptSession,
   };
@@ -167,5 +192,6 @@ module.exports = {
   extractPromise,
   parseUnsigned,
   buildIterationHeader,
+  buildSystemMessage,
   evaluate,
 };
