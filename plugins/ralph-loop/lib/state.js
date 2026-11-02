@@ -3,9 +3,9 @@
 /**
  * Ralph 循环的状态文件：读写、解析、原子更新。
  *
- * 路径固定为 `<cwd>/.wave/ralph-loop.local.md`，frontmatter 存循环参数，
- * 正文就是原始 prompt（一字不改）。hook 与 setup 脚本共用这一份实现，
- * 避免两处解析器漂移。
+ * 路径固定为 `<cwd>/.wave/ralph-loop.local.md`（wave 的项目级约定目录），
+ * frontmatter 存循环参数，正文就是原始 prompt（一字不改）。hook 与 setup 脚本共用
+ * 这一份实现，避免两处解析器漂移。
  *
  * 刻意零依赖：hook 作为普通 node 进程跑在用户仓库里，除了 node 本身不能假设
  * 任何东西存在（与同仓 security-guidance 的 lib.js 同一约定）。

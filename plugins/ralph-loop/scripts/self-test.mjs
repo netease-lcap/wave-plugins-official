@@ -6,12 +6,13 @@
  *
  * 覆盖：
  *   ① 无状态文件 ② session 不匹配 ③ 脏文件 ④ 到上限 ⑤ promise 命中
- *   ⑥ 未命中继续（含 iteration 递增与 prompt 原样喂回）
- *   ⑦ 参数经 --args-file 传输后逐字无损（引号 / $ / ; / && / 单引号 / 换行 / 反引号）
- *   ⑧ setup 认领会话 id、重复启动被拒、cancel 删文件
+ *   ⑥ 未命中继续（iteration 递增、reason 就是原始 prompt、无前缀）
+ *   ⑦ 参数解析与 Claude Code 对齐（shell 分词后的 argv：引号已剥、空白已折、
+ *      `--max-iterations=10` 不认、未知 flag 落在 prompt 里、重复 flag 后者覆盖）
+ *   ⑧ setup 认领会话 id、已有循环静默覆盖、cancel 删文件
  *   ⑨ 非 Stop 事件不接管
  *   ⑩ 轮次语义与 Claude Code 对齐（N=2 只喂回 1 次、N=1 零喂回、--help 不起循环）
- *   ⑪ 给用户看的 systemMessage（stdout 的合法 JSON、轮次号、不影响 exit code）
+ *   ⑪ 回喂走 `{"decision":"block","reason","systemMessage"}` + exit 0
  *
  * 用例跑在 tmpDir() 建的临时目录里，整段包在 try/finally 中统一 rmSync 删除。
  */
@@ -24,7 +25,8 @@ import path from "node:path";
 import process from "node:process";
 
 const require = createRequire(import.meta.url);
-const { formatStateText, parseStateText } = require("../lib/state.js");
+const { formatStateText, parseStateText, STATE_REL_PATH } = require("../lib/state.js");
+const { extractPromise } = require("../lib/loop.js");
 
 const PLUGIN_ROOT = path.resolve(import.meta.dirname, "..");
 const HOOK = path.join(PLUGIN_ROOT, "hooks", "stop.js");
@@ -68,17 +70,21 @@ function cleanupTmpDirs() {
   }
 }
 
+function stateDir(cwd) {
+  return path.dirname(path.join(cwd, STATE_REL_PATH));
+}
+
 function statePath(cwd) {
-  return path.join(cwd, ".wave", "ralph-loop.local.md");
+  return path.join(cwd, STATE_REL_PATH);
 }
 
 function writeState(cwd, options, prompt) {
-  fs.mkdirSync(path.join(cwd, ".wave"), { recursive: true });
+  fs.mkdirSync(stateDir(cwd), { recursive: true });
   fs.writeFileSync(statePath(cwd), formatStateText(options, prompt), "utf8");
 }
 
 function writeRawState(cwd, text) {
-  fs.mkdirSync(path.join(cwd, ".wave"), { recursive: true });
+  fs.mkdirSync(stateDir(cwd), { recursive: true });
   fs.writeFileSync(statePath(cwd), text, "utf8");
 }
 
@@ -99,41 +105,29 @@ function runHook(cwd, input) {
 }
 
 /**
- * 取 hook stdout 里的 `systemMessage`（给用户看的那一行）。
- * 不是合法 JSON、或没有这个字段，都算没播报 —— 用 ok 区分，别拿空串糊过去。
+ * 取 hook stdout 里的 JSON（放行时为空）。
+ * 不是合法 JSON 就返回 `{ ok:false }` —— 用 ok 区分，别拿空串糊过去。
  */
-function readSystemMessage(stdout) {
+function readStdoutJson(stdout) {
   const text = String(stdout == null ? "" : stdout).trim();
   if (!text) return { ok: false, reason: "stdout 为空" };
-  let parsed;
   try {
-    parsed = JSON.parse(text);
+    return { ok: true, value: JSON.parse(text) };
   } catch (error) {
     return {
       ok: false,
       reason: `stdout 不是合法 JSON：${error instanceof Error ? error.message : String(error)}`,
     };
   }
-  if (typeof parsed?.systemMessage !== "string" || !parsed.systemMessage) {
-    return { ok: false, reason: "没有非空 systemMessage 字段" };
-  }
-  return { ok: true, value: parsed.systemMessage };
 }
 
-// 真实的 wave 会把 `$ARGUMENTS` 原文写进 `${WAVE_ARGUMENTS_FILE}`，命令正文里
-// 只出现这个路径——参数不经过 shell，所以引号/`$`/`;` 都不必转义。这里照办：
-// 第三个参数是参数文件的内容，命令行上只多一个 `--args-file <路径>`。
-let argsFileSeq = 0;
-
-function runCli(cwd, args, argsText) {
-  const extra = [];
-  if (argsText != null) {
-    argsFileSeq += 1;
-    const argsFile = path.join(tmpDir(), `args-${argsFileSeq}.txt`);
-    fs.writeFileSync(argsFile, argsText, "utf8");
-    extra.push("--args-file", argsFile);
-  }
-  const result = spawnSync(process.execPath, [CLI, ...args, ...extra], {
+/**
+ * 跑 setup / cancel。argv 直接传，**不经过 shell**：这正是命令正文里
+ * `node ralph-loop.js start $ARGUMENTS` 在引擎里的等价形态（`$ARGUMENTS` 未加引号
+ * 交给 shell，shell 分词后 exec，脚本拿到的就是这个 argv）。
+ */
+function runCli(cwd, argv) {
+  const result = spawnSync(process.execPath, [CLI, ...argv], {
     cwd,
     encoding: "utf8",
   });
@@ -152,7 +146,7 @@ try {
     const res = runHook(cwd, { session_id: "s1", last_assistant_message: "干完了" });
     check("exit 0", res.code === 0, `实际 exit=${res.code} stderr=${res.stderr}`);
     check("没有创建状态文件", readState(cwd) === null);
-    check("不播报", res.stderr.trim() === "", `stderr=${res.stderr}`);
+    check("不播报（stdout 为空）", res.stdout.trim() === "", `stdout=${res.stdout}`);
   }
 
   // ── ② session 不匹配 ───────────────────────────────────────────
@@ -168,7 +162,7 @@ try {
     const res = runHook(cwd, { session_id: "s1", last_assistant_message: "x" });
     check("exit 0", res.code === 0, `实际 exit=${res.code}`);
     check("状态文件原样保留", readState(cwd) === before);
-    check("不播报", res.stderr.trim() === "", `stderr=${res.stderr}`);
+    check("不播报（stdout 为空）", res.stdout.trim() === "", `stdout=${res.stdout}`);
   }
 
   // ── ③ 脏状态文件 ───────────────────────────────────────────────
@@ -192,16 +186,26 @@ try {
       const cwd = tmpDir();
       writeRawState(cwd, raw);
       const res = runHook(cwd, { session_id: "s1", last_assistant_message: "x" });
+      const json = readStdoutJson(res.stdout);
       check(`${label}：exit 0`, res.code === 0, `实际 exit=${res.code}`);
       check(`${label}：状态文件已删除`, readState(cwd) === null);
-      check(`${label}：有播报`, res.stderr.includes("不合法"), `stderr=${res.stderr}`);
+      check(
+        `${label}：有播报`,
+        json.ok && json.value.systemMessage.includes("不合法") && !json.value.decision,
+        `stdout=${res.stdout}`,
+      );
     }
     // frontmatter 都读不出来
     const cwd = tmpDir();
     writeRawState(cwd, "不是状态文件\n");
     const res = runHook(cwd, { session_id: "s1", last_assistant_message: "x" });
+    const json = readStdoutJson(res.stdout);
     check("frontmatter 损坏：exit 0 且删除", res.code === 0 && readState(cwd) === null);
-    check("frontmatter 损坏：有播报", res.stderr.includes("无法解析"), `stderr=${res.stderr}`);
+    check(
+      "frontmatter 损坏：有播报",
+      json.ok && json.value.systemMessage.includes("无法解析"),
+      `stdout=${res.stdout}`,
+    );
   }
 
   // ── ④ 到 iteration 上限 ────────────────────────────────────────
@@ -217,9 +221,14 @@ try {
       session_id: "s1",
       last_assistant_message: "还没做完",
     });
+    const json = readStdoutJson(res.stdout);
     check("exit 0", res.code === 0, `实际 exit=${res.code}`);
     check("状态文件已删除", readState(cwd) === null);
-    check("播报含上限", res.stderr.includes("2 轮上限"), `stderr=${res.stderr}`);
+    check(
+      "播报含上限、且不是 block",
+      json.ok && json.value.systemMessage.includes("2 轮上限") && !json.value.decision,
+      `stdout=${res.stdout}`,
+    );
   }
 
   // ── ⑤ promise 命中 ────────────────────────────────────────────
@@ -236,9 +245,14 @@ try {
       session_id: "s1",
       last_assistant_message: "全绿了。\n<promise>\n  ALL   TESTS PASS\n</promise>\n收工。",
     });
+    const json = readStdoutJson(res.stdout);
     check("exit 0", res.code === 0, `实际 exit=${res.code}`);
     check("状态文件已删除", readState(cwd) === null);
-    check("播报含完成条件", res.stderr.includes("已完成"), `stderr=${res.stderr}`);
+    check(
+      "播报含完成条件、且不是 block",
+      json.ok && json.value.systemMessage.includes("已完成") && !json.value.decision,
+      `stdout=${res.stdout}`,
+    );
 
     // 标记不匹配 → 必须继续，不能因为「长得像」就放行
     const cwd2 = tmpDir();
@@ -251,11 +265,16 @@ try {
       session_id: "s1",
       last_assistant_message: "<promise>ALL TESTS PASSED</promise>",
     });
-    check("相近但不相等 → 继续（exit 2）", res2.code === 2, `实际 exit=${res2.code}`);
+    const json2 = readStdoutJson(res2.stdout);
+    check(
+      "相近但不相等 → 继续（decision=block）",
+      res2.code === 0 && json2.ok && json2.value.decision === "block",
+      `exit=${res2.code} stdout=${res2.stdout}`,
+    );
   }
 
   // ── ⑥ 未命中 → 继续 ───────────────────────────────────────────
-  console.log("\n⑥ 未命中 → iteration+1 写回 + prompt 原样喂回");
+  console.log("\n⑥ 未命中 → iteration+1 写回 + 原始 prompt 当 reason");
   {
     const cwd = tmpDir();
     writeState(
@@ -267,122 +286,137 @@ try {
       session_id: "s1",
       last_assistant_message: "做了一半，还有 2 个用例失败。",
     });
-    check("exit 2（阻止停止）", res.code === 2, `实际 exit=${res.code}`);
+    const json = readStdoutJson(res.stdout);
+    check("exit 0", res.code === 0, `实际 exit=${res.code}`);
     check(
-      "stderr 第一行是轮次提示",
-      res.stderr.startsWith("🔄 Ralph 第 2 轮"),
-      `stderr=${JSON.stringify(res.stderr.slice(0, 80))}`,
+      "stdout 是合法 JSON",
+      json.ok,
+      `stdout=${JSON.stringify(res.stdout)}${json.ok ? "" : `（${json.reason}）`}`,
     );
     check(
-      "提示行含完成条件与退出方式",
-      res.stderr.includes("<promise>DONE</promise>") &&
-        res.stderr.includes("/ralph-loop:cancel-ralph"),
-      `stderr=${res.stderr}`,
+      "decision=block（与 CC 的 stop-hook.sh 同一通道）",
+      json.ok && json.value.decision === "block",
+      `stdout=${res.stdout}`,
     );
     check(
-      "prompt 原样喂回",
-      res.stderr === `🔄 Ralph 第 2 轮 | 完成条件：输出 <promise>DONE</promise>（只有真的达成才输出，不要为了退出而谎报） | 最多 3 轮，本轮是第 2 轮 | 想停就 /ralph-loop:cancel-ralph\n\n${PROMPT}\n`,
-      `stderr=${JSON.stringify(res.stderr)}`,
+      "reason 就是原始 prompt（无前缀、无轮次行）",
+      json.ok && json.value.reason === PROMPT,
+      `reason=${JSON.stringify(json.ok ? json.value.reason : null)}`,
     );
+    check(
+      "systemMessage 给出轮次与退出方式",
+      json.ok &&
+        json.value.systemMessage.includes("第 2 轮") &&
+        json.value.systemMessage.includes("/ralph-loop:cancel-ralph") &&
+        json.value.systemMessage.includes("<promise>DONE</promise>"),
+      `systemMessage=${JSON.stringify(json.ok ? json.value.systemMessage : null)}`,
+    );
+    check("stderr 为空（正文只走 reason）", res.stderr.trim() === "", `stderr=${res.stderr}`);
     const parsed = parseStateText(readState(cwd));
-    check("iteration 写回为 2", parsed.ok && parsed.meta.iteration === "2", `meta=${JSON.stringify(parsed.meta)}`);
+    check(
+      "iteration 写回为 2",
+      parsed.ok && parsed.meta.iteration === "2",
+      `meta=${JSON.stringify(parsed.meta)}`,
+    );
     check("正文未被改动", parsed.ok && parsed.body === `${PROMPT}\n`);
-    check("max/completion 未被改动", parsed.ok && parsed.meta.max_iterations === "3" && parsed.meta.completion_promise === "DONE");
+    check(
+      "max/completion 未被改动",
+      parsed.ok && parsed.meta.max_iterations === "3" && parsed.meta.completion_promise === "DONE",
+    );
 
-    // 没有完成条件时的提示行
+    // 没有完成条件时的播报文案
     const cwd2 = tmpDir();
     writeState(cwd2, { iteration: 1, maxIterations: 0, completionPromise: "", sessionId: "s1" }, PROMPT);
     const res2 = runHook(cwd2, { session_id: "s1", last_assistant_message: "x" });
+    const json2 = readStdoutJson(res2.stdout);
     check(
-      "未设完成条件时提示不同",
-      res2.code === 2 && res2.stderr.startsWith("🔄 Ralph 第 2 轮 | 未设完成条件"),
-      `stderr=${JSON.stringify(res2.stderr.slice(0, 60))}`,
+      "未设完成条件时播报不同",
+      json2.ok &&
+        json2.value.decision === "block" &&
+        json2.value.systemMessage.includes("未设完成条件"),
+      `stdout=${res2.stdout}`,
     );
   }
 
-  // ── ⑦ 参数经 stdin 传输的完整性 ────────────────────────────────
-  console.log("\n⑦ setup 从参数文件读参数：引号 / $ / ; / && / 换行 都原样保留");
+  // ── ⑦ 参数解析（与 CC 同一套 argv 规则）─────────────────────────
+  console.log("\n⑦ 参数解析：shell 分词后的 argv，规则与 CC 一致");
   {
+    // 最基本的：多词 prompt 拼回一句，flag 被摘掉
     const cwd = tmpDir();
-    const prompt = [
-      "请修好 tests/login.test.ts",
-      '  保留缩进：$HOME 与 `date` 与 $(whoami)',
-      `  危险字符：a; b && c | d > e < f & g`,
-      `  引号：'single' "double" 反斜杠 \\ 结尾`,
-      "最后一行（中文括号里的话也要原样留下）",
-    ].join("\n");
-    // 期望：一个字都不改——参数没经过 shell，引号不是语法，是正文
-    const expectedBody = [
-      "请修好 tests/login.test.ts",
-      '  保留缩进：$HOME 与 `date` 与 $(whoami)',
-      `  危险字符：a; b && c | d > e < f & g`,
-      `  引号：'single' "double" 反斜杠 \\ 结尾`,
-      "最后一行（中文括号里的话也要原样留下）",
-    ].join("\n");
-    const stdin = `--max-iterations 2 --completion-promise "ALL TESTS PASS"\n${prompt}\n`;
-    const res = runCli(cwd, ["start"], stdin);
-    check("exit 0", res.code === 0, `stdout=${res.stdout} stderr=${res.stderr}`);
+    const res = runCli(cwd, ["start", "把", "tests", "修好", "--max-iterations", "2"]);
     const parsed = parseStateText(readState(cwd) || "");
+    check("exit 0", res.code === 0, `stdout=${res.stdout} stderr=${res.stderr}`);
     check("状态文件可解析", parsed.ok, `reason=${parsed.reason}`);
     check(
-      "prompt 正文：逐字一致（含引号 / $ / ; / && / 换行 / 反引号）",
-      parsed.ok && parsed.body === `${expectedBody}\n`,
-      `实际正文=${JSON.stringify(parsed && parsed.body)}`,
-    );
-    check("--max-iterations 解析为 2", parsed.ok && parsed.meta.max_iterations === "2", `meta=${JSON.stringify(parsed.meta)}`);
-    check(
-      "--completion-promise 带空格的引号值解析正确",
-      parsed.ok && parsed.meta.completion_promise === "ALL TESTS PASS",
-      `meta=${JSON.stringify(parsed.meta)}`,
-    );
-    check("setup 输出提示了轮次上限", res.stdout.includes("轮次上限：2 轮"), `stdout=${res.stdout}`);
-    check("setup 启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1", `meta=${JSON.stringify(parsed.meta)}`);
-    check("setup 输出带迭代信息（第 1 轮 / 共 2 轮）", res.stdout.includes("迭代：第 1 轮 / 共 2 轮"), `stdout=${res.stdout}`);
-    check(
-      "setup 在摘要之后空一行、回显 prompt 原文（逐字，含引号与换行）",
-      parsed.ok && res.stdout.endsWith(`\n\n${expectedBody}\n`),
-      `尾部=${JSON.stringify(res.stdout.slice(-120))}`,
-    );
-    check(
-      "回显的正文与写进状态文件的正文逐字一致",
-      parsed.ok && res.stdout.endsWith(`\n\n${parsed.body}`),
+      "多词 prompt 用单个空格拼成一句",
+      parsed.ok && parsed.body === "把 tests 修好\n",
       `body=${JSON.stringify(parsed.ok && parsed.body)}`,
     );
     check(
-      "设了完成条件时 setup 输出说明写法（不许谎报）",
-      res.stdout.includes("<promise>ALL TESTS PASS</promise>") && res.stdout.includes("没做到就别输出"),
-      `stdout=${res.stdout}`,
+      "--max-iterations 解析为 2",
+      parsed.ok && parsed.meta.max_iterations === "2",
+      `meta=${JSON.stringify(parsed.meta)}`,
+    );
+    check("启动时写 iteration: 1", parsed.ok && parsed.meta.iteration === "1");
+    check("setup 输出带迭代信息（第 1 轮 / 共 2 轮）", res.stdout.includes("迭代：第 1 轮 / 共 2 轮"), `stdout=${res.stdout}`);
+    check(
+      "setup 摘要之后空一行、回显 prompt",
+      res.stdout.endsWith("\n\n把 tests 修好\n"),
+      `尾部=${JSON.stringify(res.stdout.slice(-60))}`,
+    );
+    check(
+      "状态文件写在 .wave/ 下（wave 自己的项目级约定目录）",
+      STATE_REL_PATH === path.join(".wave", "ralph-loop.local.md"),
+      `STATE_REL_PATH=${STATE_REL_PATH}`,
     );
 
-    // 引号不再是语法：不做 shell 的 quote removal，写什么就是什么
-    const quoteCases = [
-      ["整段双引号", '"Fix the auth bug"'],
-      ["整段单引号", "'Fix the auth bug'"],
-      ["词中引号", 'Fix "the auth" bug'],
-      ["词中单引号", "Fix 'the auth' bug"],
-      ["双引号里的反斜杠", '"say \\"hi\\" now"'],
-      ["多行 + 引号：换行必须保留", '第一行 "带引号"\n第二行'],
-      ["只有半边引号", "don't panic"],
-      ["看起来像要执行的东西也不执行", "$(rm -rf /) `whoami` a && b"],
-    ];
-    for (const [label, input] of quoteCases) {
-      const caseCwd = tmpDir();
-      const caseRes = runCli(caseCwd, ["start"], `${input}\n`);
-      const caseParsed = parseStateText(readState(caseCwd) || "");
-      check(
-        `原样保留：${label}`,
-        caseRes.code === 0 && caseParsed.ok && caseParsed.body === `${input}\n`,
-        `body=${JSON.stringify(caseParsed.ok && caseParsed.body)} 期望=${JSON.stringify(input + "\n")}`,
-      );
-    }
+    // 完成标记含空格：shell 已把整段引号内容合成一个 argv 元素
+    const cwdQ = tmpDir();
+    const resQ = runCli(cwdQ, [
+      "start",
+      "补齐测试",
+      "--completion-promise",
+      "ALL TESTS PASS",
+    ]);
+    const parsedQ = parseStateText(readState(cwdQ) || "");
+    check(
+      "带空格的 --completion-promise 完整保留（一个 argv 元素）",
+      resQ.code === 0 &&
+        parsedQ.ok &&
+        parsedQ.meta.completion_promise === "ALL TESTS PASS" &&
+        parsedQ.body === "补齐测试\n",
+      `meta=${JSON.stringify(parsedQ.ok && parsedQ.meta)} body=${JSON.stringify(parsedQ.ok && parsedQ.body)}`,
+    );
+    check(
+      "设了完成条件时 setup 说明写法（不许谎报）",
+      resQ.stdout.includes("<promise>ALL TESTS PASS</promise>") && resQ.stdout.includes("没做到就别输出"),
+      `stdout=${resQ.stdout}`,
+    );
 
-    // 同一 flag 给多次：后者覆盖（CC 的解析循环也是每次覆盖）
+    // 引号在 prompt 中间：shell 只剥语法引号，词与词之间的分隔由 shell 定；
+    // 到了脚本这里已经没有「引号里藏 flag」这回事（旧实现会被它吃掉）
+    const cwdInner = tmpDir();
+    const resInner = runCli(cwdInner, ["start", "把 a --max-iterations 5 b 改成 3"]);
+    const parsedInner = parseStateText(readState(cwdInner) || "");
+    check(
+      "引号里出现的 flag 字样不被解析（旧实现会吃掉）",
+      resInner.code === 0 &&
+        parsedInner.ok &&
+        parsedInner.meta.max_iterations === "0" &&
+        parsedInner.body === "把 a --max-iterations 5 b 改成 3\n",
+      `meta=${JSON.stringify(parsedInner.ok && parsedInner.meta)} body=${JSON.stringify(parsedInner.ok && parsedInner.body)}`,
+    );
+
+    // 重复 flag：后者覆盖（CC 的 case 循环同样如此）
     const cwdDup = tmpDir();
-    const resDup = runCli(
-      cwdDup,
-      ["start"],
-      "--max-iterations 2 --completion-promise FIRST\n干活\n--max-iterations 5 --completion-promise SECOND",
-    );
+    const resDup = runCli(cwdDup, [
+      "start",
+      "--max-iterations", "2",
+      "--completion-promise", "FIRST",
+      "干活",
+      "--max-iterations", "5",
+      "--completion-promise", "SECOND",
+    ]);
     const parsedDup = parseStateText(readState(cwdDup) || "");
     check(
       "重复 flag：取最后一个值",
@@ -398,92 +432,103 @@ try {
       `body=${JSON.stringify(parsedDup.ok && parsedDup.body)}`,
     );
 
-    // 等号形式（CC 不认，我们额外支持）
+    // 等号形式：CC 不认，我们也不认（整段当 prompt 正文）
     const cwdEq = tmpDir();
-    const resEq = runCli(cwdEq, ["start"], "--max-iterations=10 干活");
+    const resEq = runCli(cwdEq, ["start", "--max-iterations=10", "干活"]);
     const parsedEq = parseStateText(readState(cwdEq) || "");
     check(
-      "--max-iterations=10 等号形式生效",
+      "--max-iterations=10 不认，当 prompt 正文（与 CC 一致）",
       resEq.code === 0 &&
         parsedEq.ok &&
-        parsedEq.meta.max_iterations === "10" &&
-        parsedEq.body === "干活\n",
+        parsedEq.meta.max_iterations === "0" &&
+        parsedEq.body === "--max-iterations=10 干活\n",
       `meta=${JSON.stringify(parsedEq.ok && parsedEq.meta)} body=${JSON.stringify(parsedEq.ok && parsedEq.body)}`,
     );
 
-    // 裸值形式 + 无引号
-    const cwd2 = tmpDir();
-    const res2 = runCli(cwd2, ["start"], "--completion-promise NOOP\n随便做点什么");
-    const parsed2 = parseStateText(readState(cwd2) || "");
-    check(
-      "裸值 flag 也能解析",
-      res2.code === 0 &&
-        parsed2.ok &&
-        parsed2.meta.completion_promise === "NOOP" &&
-        parsed2.body === "随便做点什么\n",
-      `stdout=${res2.stdout} body=${JSON.stringify(parsed2.ok && parsed2.body)}`,
-    );
-
-    // 不认识的 flag 必须原样留在 prompt 里（与 CC 一致，不报错）
-    const cwd5 = tmpDir();
-    const res5 = runCli(cwd5, ["start"], "--foo bar --unknown\n干活");
-    const parsed5 = parseStateText(readState(cwd5) || "");
+    // 未知 flag：留在 prompt 里，不报错（与 CC 一致）
+    const cwdUnknown = tmpDir();
+    const resUnknown = runCli(cwdUnknown, ["start", "--foo", "bar", "--unknown", "干活"]);
+    const parsedUnknown = parseStateText(readState(cwdUnknown) || "");
     check(
       "未知 flag 仍算 prompt 正文（不报错）",
-      res5.code === 0 &&
-        parsed5.ok &&
-        parsed5.body === "--foo bar --unknown\n干活\n" &&
-        parsed5.meta.max_iterations === "0",
-      `stdout=${res5.stdout} body=${JSON.stringify(parsed5.ok && parsed5.body)}`,
+      resUnknown.code === 0 &&
+        parsedUnknown.ok &&
+        parsedUnknown.body === "--foo bar --unknown 干活\n" &&
+        parsedUnknown.meta.max_iterations === "0",
+      `stdout=${resUnknown.stdout} body=${JSON.stringify(parsedUnknown.ok && parsedUnknown.body)}`,
     );
 
-    // 非法 flag
-    const cwd3 = tmpDir();
-    const res3 = runCli(cwd3, ["start"], "--max-iterations abc\n干活");
-    check("非法 --max-iterations 被拒", res3.code === 1 && res3.stdout.includes("❌"), `stdout=${res3.stdout}`);
-    check("被拒时不留状态文件", readState(cwd3) === null);
+    // 非法 --max-iterations
+    for (const [label, argv] of [
+      ["值非数字", ["start", "--max-iterations", "abc", "干活"]],
+      ["缺值", ["start", "--max-iterations"]],
+      ["缺完成标记值", ["start", "--completion-promise"]],
+      ["完成标记为空串", ["start", "干活", "--completion-promise", ""]],
+    ]) {
+      const badCwd = tmpDir();
+      const bad = runCli(badCwd, argv);
+      check(`${label} ⇒ exit 1 且点名原因`, bad.code === 1 && bad.stdout.includes("❌"), `exit=${bad.code} stdout=${bad.stdout}`);
+      check(`${label} ⇒ 不留状态文件`, readState(badCwd) === null);
+    }
 
-    // 空 prompt
-    const cwd4 = tmpDir();
-    const res4 = runCli(cwd4, ["start"], "--max-iterations 3\n");
-    check("空 prompt 被拒", res4.code === 1 && readState(cwd4) === null, `stdout=${res4.stdout}`);
-
-    // 手敲 start 而没有参数文件：说清缺什么，而不是静默起一个空循环
-    const cwdNoArgs = tmpDir();
-    const resNoArgs = runCli(cwdNoArgs, ["start"]);
+    // 空 prompt：说清用法，而不是静默起一个空循环
+    const cwdNoPrompt = tmpDir();
+    const resNoPrompt = runCli(cwdNoPrompt, ["start"]);
     check(
-      "缺 --args-file ⇒ 非零退出并点名原因",
-      resNoArgs.code === 1 &&
-        resNoArgs.stdout.includes("--args-file") &&
-        readState(cwdNoArgs) === null,
-      `exit=${resNoArgs.code} stdout=${resNoArgs.stdout}`,
+      "空 prompt ⇒ exit 1 并给出用法",
+      resNoPrompt.code === 1 &&
+        resNoPrompt.stdout.includes("没有 prompt") &&
+        readState(cwdNoPrompt) === null,
+      `exit=${resNoPrompt.code} stdout=${resNoPrompt.stdout}`,
+    );
+
+    // 未知子命令
+    const resBadAction = runCli(tmpDir(), ["bogus"]);
+    check(
+      "未知子命令 ⇒ exit 1 且点名",
+      resBadAction.code === 1 && resBadAction.stdout.includes("未知子命令"),
+      `stdout=${resBadAction.stdout}`,
     );
   }
 
-  // ── ⑧ 会话认领 / 重复启动 / cancel ─────────────────────────────
-  console.log("\n⑧ 会话认领、重复启动、cancel");
+  // ── ⑧ 会话认领 / 覆盖启动 / cancel ─────────────────────────────
+  console.log("\n⑧ 会话认领、覆盖启动、cancel");
   {
     const cwd = tmpDir();
-    runCli(cwd, ["start"], `--max-iterations 2\n${PROMPT}`);
+    runCli(cwd, ["start", "--max-iterations", "2", PROMPT]);
     const res = runHook(cwd, { session_id: "会话-A", last_assistant_message: "x" });
     const parsed = parseStateText(readState(cwd) || "");
-    check("exit 2", res.code === 2, `实际 exit=${res.code}`);
-    check("空 session_id 被本次 Stop hook 认领", parsed.ok && parsed.meta.session_id === "会话-A", `meta=${JSON.stringify(parsed.meta)}`);
+    check("继续（decision=block）", res.code === 0 && readStdoutJson(res.stdout).value?.decision === "block", `stdout=${res.stdout}`);
+    check(
+      "空 session_id 被本次 Stop hook 认领",
+      parsed.ok && parsed.meta.session_id === "会话-A",
+      `meta=${JSON.stringify(parsed.meta)}`,
+    );
 
     // 认领之后别的会话不能再续
     const other = runHook(cwd, { session_id: "会话-B", last_assistant_message: "x" });
     const after = parseStateText(readState(cwd) || "");
-    check("认领后别的会话被放行", other.code === 0, `实际 exit=${other.code}`);
+    check("认领后别的会话被放行", other.code === 0 && other.stdout.trim() === "", `stdout=${other.stdout}`);
     check("认领后 iteration 不再变", after.ok && after.meta.iteration === "2", `meta=${JSON.stringify(after.meta)}`);
 
-    // 已有循环时不允许重复启动
-    const dup = runCli(cwd, ["start"], "另一个任务");
-    check("已有循环 → 拒绝重复启动", dup.code === 1 && readState(cwd) !== null, `stdout=${dup.stdout}`);
+    // 已有循环时再启动：与 CC 一致，静默覆盖状态文件
+    const dup = runCli(cwd, ["start", "另一个任务"]);
+    const afterDup = parseStateText(readState(cwd) || "");
+    check("已有循环 → 直接覆盖（不拦、exit 0）", dup.code === 0, `exit=${dup.code} stdout=${dup.stdout}`);
+    check(
+      "覆盖后正文是新 prompt",
+      afterDup.ok && afterDup.body === "另一个任务\n",
+      `body=${JSON.stringify(afterDup.ok && afterDup.body)}`,
+    );
 
     const cancel = runCli(cwd, ["cancel"]);
     check("cancel 删除状态文件", cancel.code === 0 && readState(cwd) === null, `stdout=${cancel.stdout}`);
     const cancelAgain = runCli(cwd, ["cancel"]);
-    check("重复 cancel 不报错", cancelAgain.code === 0 && cancelAgain.stdout.includes("没有正在跑"), `stdout=${cancelAgain.stdout}`);
+    check(
+      "重复 cancel 不报错",
+      cancelAgain.code === 0 && cancelAgain.stdout.includes("没有正在跑"),
+      `stdout=${cancelAgain.stdout}`,
+    );
   }
 
   // ── ⑨ 不接管 SubagentStop ────────────────────────────────────
@@ -507,7 +552,7 @@ try {
   {
     // N = 2：stop#1 回喂一次（iteration 写回 2），stop#2 到上限收尾
     const cwd = tmpDir();
-    const setup = runCli(cwd, ["start"], `--max-iterations 2\n${PROMPT}`);
+    const setup = runCli(cwd, ["start", "--max-iterations", "2", PROMPT]);
     const afterSetup = parseStateText(readState(cwd) || "");
     check(
       "N=2 启动后 iteration=1（首回合算第 1 轮）",
@@ -516,45 +561,70 @@ try {
     );
 
     const stop1 = runHook(cwd, { session_id: "s1", last_assistant_message: "第 1 轮干完了" });
+    const json1 = readStdoutJson(stop1.stdout);
     const after1 = parseStateText(readState(cwd) || "");
-    check("N=2 第一次 Stop ⇒ 恰好 1 次回喂（exit 2）", stop1.code === 2, `实际 exit=${stop1.code}`);
-    check("N=2 回喂提示行是「第 2 轮」", stop1.stderr.startsWith("🔄 Ralph 第 2 轮"), `stderr=${JSON.stringify(stop1.stderr.slice(0, 40))}`);
+    check("N=2 第一次 Stop ⇒ 恰好 1 次回喂（block）", json1.ok && json1.value.decision === "block", `stdout=${stop1.stdout}`);
+    check("N=2 播报是「第 2 轮」", json1.ok && json1.value.systemMessage.includes("第 2 轮"), `stdout=${stop1.stdout}`);
     check("N=2 iteration 写回 2", after1.ok && after1.meta.iteration === "2", `meta=${JSON.stringify(after1.ok && after1.meta)}`);
 
     const stop2 = runHook(cwd, { session_id: "s1", last_assistant_message: "第 2 轮干完了" });
+    const json2 = readStdoutJson(stop2.stdout);
     check("N=2 第二次 Stop ⇒ 到上限，不再回喂（exit 0）", stop2.code === 0, `实际 exit=${stop2.code}`);
+    check("N=2 第二次 Stop 时没有 decision", json2.ok && !json2.value.decision, `stdout=${stop2.stdout}`);
     check("N=2 第二次 Stop 后状态文件已删除", readState(cwd) === null);
-    check("N=2 播报「2 轮上限」", stop2.stderr.includes("2 轮上限"), `stderr=${stop2.stderr}`);
+    check("N=2 播报「2 轮上限」", json2.ok && json2.value.systemMessage.includes("2 轮上限"), `stdout=${stop2.stdout}`);
 
     // N = 1：首次 Stop 就到上限，零回喂
     const cwd1 = tmpDir();
-    const setup1 = runCli(cwd1, ["start"], `--max-iterations 1\n${PROMPT}`);
+    const setup1 = runCli(cwd1, ["start", "--max-iterations", "1", PROMPT]);
     const afterSetup1 = parseStateText(readState(cwd1) || "");
-    check("N=1 启动后 iteration=1", setup1.code === 0 && afterSetup1.ok && afterSetup1.meta.iteration === "1", `meta=${JSON.stringify(afterSetup1.ok && afterSetup1.meta)}`);
+    check(
+      "N=1 启动后 iteration=1",
+      setup1.code === 0 && afterSetup1.ok && afterSetup1.meta.iteration === "1",
+      `meta=${JSON.stringify(afterSetup1.ok && afterSetup1.meta)}`,
+    );
     check("N=1 setup 输出提示「就这一轮」", setup1.stdout.includes("本回合就是唯一一轮"), `stdout=${setup1.stdout}`);
 
     const stopOne = runHook(cwd1, { session_id: "s1", last_assistant_message: "干完了" });
+    const jsonOne = readStdoutJson(stopOne.stdout);
     check("N=1 首次 Stop ⇒ 零回喂（exit 0）", stopOne.code === 0, `实际 exit=${stopOne.code}`);
+    check("N=1 首次 Stop 时没有 decision", jsonOne.ok && !jsonOne.value.decision, `stdout=${stopOne.stdout}`);
     check("N=1 首次 Stop 后状态文件已删除", readState(cwd1) === null);
-    check("N=1 播报「1 轮上限」", stopOne.stderr.includes("1 轮上限"), `stderr=${stopOne.stderr}`);
+    check("N=1 播报「1 轮上限」", jsonOne.ok && jsonOne.value.systemMessage.includes("1 轮上限"), `stdout=${stopOne.stdout}`);
 
-    // --help：打印用法、exit 0、绝不写状态文件（也不被已有循环挡住）
+    // --help：打印用法、exit 0、绝不写状态文件
     for (const flag of ["--help", "-h"]) {
       const cwdHelp = tmpDir();
-      const help = runCli(cwdHelp, ["start"], `${flag}\n`);
+      const help = runCli(cwdHelp, ["start", flag]);
       check(
         `${flag} ⇒ exit 0 并打印用法`,
         help.code === 0 && help.stdout.includes("Ralph 循环用法") && help.stdout.includes("--max-iterations"),
         `exit=${help.code} stdout=${JSON.stringify(help.stdout.slice(0, 60))}`,
       );
       check(`${flag} ⇒ 不创建状态文件`, readState(cwdHelp) === null);
+      // 与 CC 一致：用法文案里就是完整的 `<promise>TEXT</promise>`（不拆成三段），
+      // 所以循环运行中问用法、被模型原样转述时，提取到的是裸占位符 `TEXT` —— 与 CC 同风险，
+      // 这里把它钉住，免得以后有人「顺手修好」又和 CC 不一致。
+      check(
+        `${flag} ⇒ 文案里是完整标签（与 CC 相同，刻意不拆）`,
+        extractPromise(help.stdout) === "TEXT",
+        `提取到 ${JSON.stringify(extractPromise(help.stdout))}`,
+      );
     }
+
+    // 直接跑脚本（不经 start）也能看用法
+    const helpDirect = runCli(tmpDir(), ["--help"]);
+    check(
+      "裸 --help ⇒ exit 0 并打印用法",
+      helpDirect.code === 0 && helpDirect.stdout.includes("Ralph 循环用法"),
+      `exit=${helpDirect.code}`,
+    );
 
     // 已有循环时 --help 仍然只打用法，不动状态文件
     const cwdBusy = tmpDir();
     writeState(cwdBusy, { iteration: 1, maxIterations: 5, completionPromise: "", sessionId: "s1" }, PROMPT);
     const before = readState(cwdBusy);
-    const helpBusy = runCli(cwdBusy, ["start"], "--help\n");
+    const helpBusy = runCli(cwdBusy, ["start", "--help"]);
     check(
       "已有循环时 --help 仍打用法且不动状态文件",
       helpBusy.code === 0 && helpBusy.stdout.includes("Ralph 循环用法") && readState(cwdBusy) === before,
@@ -562,13 +632,11 @@ try {
     );
   }
 
-  // ── ⑪ systemMessage：stdout 上那行给用户看的 JSON ───────────────
-  // wave 的 Stop hook 认得 stdout 里的 systemMessage，会把它显示给**用户**（模型看不到，
-  // 模型那边只有 exit 2 的 stderr）。老客户端整个忽略 Stop hook 的 stdout，所以这里
-  // 每一条都同时断言 exit code 没被这一行带偏。
-  console.log("\n⑪ 给用户看的 systemMessage（stdout，不影响 exit code）");
+  // ── ⑪ 两个受众、两个字段 ───────────────────────────────────────
+  // reason → 模型（注入成 meta user message 后重开一轮）；systemMessage → 用户（对话里的一行）。
+  // 两者同在一份 JSON 里，必须各就各位。
+  console.log("\n⑪ reason 给模型、systemMessage 给用户");
   {
-    // continue：stdout 必须是合法 JSON，轮次号与 stderr 提示行对得上
     const cwd = tmpDir();
     writeState(
       cwd,
@@ -579,77 +647,50 @@ try {
       session_id: "s1",
       last_assistant_message: "还有 2 个用例没修好",
     });
-    const msg = readSystemMessage(res.stdout);
+    const json = readStdoutJson(res.stdout);
+    check("继续：stdout 只有一个 JSON 对象", json.ok && json.value !== null && typeof json.value === "object", `stdout=${res.stdout}`);
     check(
-      "继续：stdout 是合法 JSON 且有非空 systemMessage",
-      msg.ok,
-      `stdout=${JSON.stringify(res.stdout)} ${msg.ok ? "" : `（${msg.reason}）`}`,
+      "继续：reason 不含轮次前缀（模型每轮看到同一段话）",
+      json.ok && !json.value.reason.includes("🔄") && !json.value.reason.includes("第 2 轮"),
+      `reason=${JSON.stringify(json.ok ? json.value.reason : null)}`,
     );
     check(
       "继续：systemMessage 含「第 2 轮」",
-      msg.ok && msg.value.includes("第 2 轮"),
-      `systemMessage=${JSON.stringify(msg.ok ? msg.value : null)}`,
-    );
-    check(
-      "继续：systemMessage 给出退出方式与完成条件",
-      msg.ok &&
-        msg.value.includes("/ralph-loop:cancel-ralph") &&
-        msg.value.includes("<promise>DONE</promise>"),
-      `systemMessage=${JSON.stringify(msg.ok ? msg.value : null)}`,
+      json.ok && json.value.systemMessage.includes("第 2 轮"),
+      `systemMessage=${JSON.stringify(json.ok ? json.value.systemMessage : null)}`,
     );
     check(
       "继续：systemMessage 不复述 prompt 正文",
-      msg.ok && !msg.value.includes("tests/login.test.ts"),
-      `systemMessage=${JSON.stringify(msg.ok ? msg.value : null)}`,
+      json.ok && !json.value.systemMessage.includes("tests/login.test.ts"),
+      `systemMessage=${JSON.stringify(json.ok ? json.value.systemMessage : null)}`,
     );
-    check("继续：exit 仍是 2（老客户端靠它继续循环）", res.code === 2, `实际 exit=${res.code}`);
 
-    // 没设完成条件：文案里不能出现 <promise>，否则用户会以为输出它就能停
+    // 没设完成条件：给用户的文案里不能出现 <promise>，否则他会以为输出它就能停
     const cwdNoPromise = tmpDir();
     writeState(
       cwdNoPromise,
       { iteration: 1, maxIterations: 0, completionPromise: "", sessionId: "s1" },
       PROMPT,
     );
-    const resNoPromise = runHook(cwdNoPromise, {
-      session_id: "s1",
-      last_assistant_message: "x",
-    });
-    const msgNoPromise = readSystemMessage(resNoPromise.stdout);
+    const resNoPromise = runHook(cwdNoPromise, { session_id: "s1", last_assistant_message: "x" });
+    const jsonNoPromise = readStdoutJson(resNoPromise.stdout);
     check(
-      "未设完成条件：systemMessage 有播报且不含 <promise>",
-      msgNoPromise.ok && !msgNoPromise.value.includes("<promise>"),
-      `stdout=${JSON.stringify(resNoPromise.stdout)}`,
+      "未设完成条件：systemMessage 不含 <promise>",
+      jsonNoPromise.ok && !jsonNoPromise.value.systemMessage.includes("<promise>"),
+      `stdout=${resNoPromise.stdout}`,
     );
     check(
       "未设完成条件：systemMessage 仍给 cancel 命令",
-      msgNoPromise.ok && msgNoPromise.value.includes("/ralph-loop:cancel-ralph"),
-      `systemMessage=${JSON.stringify(msgNoPromise.ok ? msgNoPromise.value : null)}`,
+      jsonNoPromise.ok && jsonNoPromise.value.systemMessage.includes("/ralph-loop:cancel-ralph"),
+      `stdout=${resNoPromise.stdout}`,
+    );
+    check(
+      "未设完成条件：reason 仍是原始 prompt",
+      jsonNoPromise.ok && jsonNoPromise.value.reason === PROMPT,
+      `reason=${JSON.stringify(jsonNoPromise.ok ? jsonNoPromise.value.reason : null)}`,
     );
 
-    // 收尾（limit）：--max-iterations 1 ⇒ 首个 Stop 就到上限，exit 0 + 一行播报
-    const cwdLimit = tmpDir();
-    runCli(cwdLimit, ["start"], `--max-iterations 1\n${PROMPT}`);
-    const resLimit = runHook(cwdLimit, { session_id: "s1", last_assistant_message: "干完了" });
-    const msgLimit = readSystemMessage(resLimit.stdout);
-    check("收尾（limit）：exit 仍是 0", resLimit.code === 0, `实际 exit=${resLimit.code}`);
-    check(
-      "收尾（limit）：stdout 是合法 JSON 且 systemMessage 非空",
-      msgLimit.ok,
-      `stdout=${JSON.stringify(resLimit.stdout)} ${msgLimit.ok ? "" : `（${msgLimit.reason}）`}`,
-    );
-    check(
-      "收尾（limit）：systemMessage 与写进日志的那句一致",
-      msgLimit.ok && msgLimit.value === resLimit.stderr.trim(),
-      `systemMessage=${JSON.stringify(msgLimit.ok ? msgLimit.value : null)} stderr=${JSON.stringify(resLimit.stderr.trim())}`,
-    );
-    check(
-      "收尾（limit）：systemMessage 说明了轮次上限",
-      msgLimit.ok && msgLimit.value.includes("1 轮上限"),
-      `systemMessage=${JSON.stringify(msgLimit.ok ? msgLimit.value : null)}`,
-    );
-
-    // 收尾（complete）：命中完成标记时也要有这一行
+    // 收尾（complete）：命中完成标记时也要有 systemMessage
     const cwdDone = tmpDir();
     writeState(
       cwdDone,
@@ -660,16 +701,21 @@ try {
       session_id: "s1",
       last_assistant_message: "全绿了\n<promise>DONE</promise>",
     });
-    const msgDone = readSystemMessage(resDone.stdout);
+    const jsonDone = readStdoutJson(resDone.stdout);
     check(
       "收尾（complete）：exit 0 且 systemMessage 非空",
-      resDone.code === 0 && msgDone.ok,
-      `exit=${resDone.code} stdout=${JSON.stringify(resDone.stdout)}`,
+      resDone.code === 0 && jsonDone.ok && Boolean(jsonDone.value.systemMessage),
+      `exit=${resDone.code} stdout=${resDone.stdout}`,
     );
     check(
       "收尾（complete）：systemMessage 点出命中的完成条件",
-      msgDone.ok && msgDone.value.includes("<promise>DONE</promise>"),
-      `systemMessage=${JSON.stringify(msgDone.ok ? msgDone.value : null)}`,
+      jsonDone.ok && jsonDone.value.systemMessage.includes("<promise>DONE</promise>"),
+      `stdout=${resDone.stdout}`,
+    );
+    check(
+      "收尾（complete）：没有 decision（不拦停）",
+      jsonDone.ok && !jsonDone.value.decision,
+      `stdout=${resDone.stdout}`,
     );
 
     // 放行：没有循环时别往 stdout 写东西，用户屏幕上不该冒出无关提示
@@ -679,6 +725,29 @@ try {
       "放行：stdout 为空（不打扰用户）",
       resPass.code === 0 && resPass.stdout.trim() === "",
       `exit=${resPass.code} stdout=${JSON.stringify(resPass.stdout)}`,
+    );
+  }
+
+  // ── ⑫ stop_hook_active 不影响判定（CC 的 ralph 也不用它）───────
+  console.log("\n⑫ stop_hook_active / permission_mode 传进来也不改变行为");
+  {
+    const cwd = tmpDir();
+    writeState(
+      cwd,
+      { iteration: 1, maxIterations: 3, completionPromise: "", sessionId: "s1" },
+      PROMPT,
+    );
+    const res = runHook(cwd, {
+      session_id: "s1",
+      last_assistant_message: "x",
+      stop_hook_active: true,
+      permission_mode: "acceptEdits",
+    });
+    const json = readStdoutJson(res.stdout);
+    check(
+      "stop_hook_active=true 照样喂回（判定只看 iteration）",
+      json.ok && json.value.decision === "block",
+      `stdout=${res.stdout}`,
     );
   }
 } finally {

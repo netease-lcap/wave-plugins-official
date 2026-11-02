@@ -3,8 +3,11 @@
 把同一段 prompt 一轮一轮喂回**同一个会话**，每轮都在上一轮留下的文件与 git 历史
 上继续干，直到模型自己输出完成标记（或到达轮次上限）。
 
-机制来自 Geoffrey Huntley 的 Ralph Wiggum 技术，这里是 wave 版实现，不是 CC 插件的
-移植：CC 用 `{"decision":"block","reason":...}` 拦退出，wave 的协议完全不同（见下）。
+机制来自 Geoffrey Huntley 的 Ralph Wiggum 技术。行为上跟 Claude Code 的官方 ralph-loop
+插件**思想一致**：同一条拦停通道（`{"decision":"block","reason":…}` + exit 0）、同一套参数
+解析（`$ARGUMENTS` 交给 shell 分词）、同样的轮次语义、同样的「已有循环静默覆盖」。
+**平台约定一律用 wave 自己的**——状态文件在 `.wave/`、插件清单在 `.wave-plugin/`、
+根占位符是 `${WAVE_PLUGIN_ROOT}`、命令带插件名前缀——这些不参与兼容性，没必要改成 `.claude/`。
 
 ## 机制
 
@@ -16,41 +19,47 @@
         ├─ 模型**当场开始执行 prompt**（这就是第 1 轮，不会先回一句「已就绪」）
         │
         └─ agent 干完一轮想停
-              └─ Stop hook 拦下：iteration+1 写回，把「第 N 轮提示行 + 原始 prompt」
-                 写到 stderr 并 exit 2（同时往 stdout 打一行 systemMessage 给你看）
-                    └─ wave 把 stderr 作为一条 meta user message 注入会话，重开一轮
+              └─ Stop hook 拦下：iteration+1 写回，往 stdout 打一行
+                 {"decision":"block","reason":"<原始 prompt>","systemMessage":"<给用户的一行>"} 并 exit 0
+                    └─ wave 把 reason 作为一条 meta user message 注入会话，重开一轮
                           └─ 循环，直到命中 <promise>…</promise> / 到上限 / 手动取消
 ```
 
+`reason` **就是原始 prompt，不带任何前缀**（与 CC 的 `stop-hook.sh` 一致）：模型每轮
+看到的都是同一段话，进度全靠文件与 git 历史累积；「第几轮 / 怎么停」写在同一份 JSON 的
+`systemMessage` 里，那是给**用户**看的。
+
 轮次语义刻意与 CC 的 `setup-ralph-loop.sh` + `stop-hook.sh` 对齐：状态文件里的
 `iteration` 是「当前回合序号」，启动时就是 `1`；Stop hook 在自增**之前**判
-`iteration >= max_iterations`，否则写回 `iteration + 1`，并把**新**序号写进提示行
-（第一次回喂显示「第 2 轮」，同 CC 的 `Ralph iteration 2`）。所以
+`iteration >= max_iterations`，否则写回 `iteration + 1`，并把**新**序号写进
+`systemMessage`（第一次回喂显示「第 2 轮」，同 CC 的 `Ralph iteration 2`）。所以
 `--max-iterations N` = 总共 N 个回合（含首回合）= `N-1` 次回喂。
 
 wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 
-- Stop hook 的「阻止停止 + 继续对话」= `process.stderr.write(text)` + `process.exit(2)`
-  （`managers/hookManager.ts` 的 `handleBlockingError` / `managers/aiManager.ts` 的
-  `executeStopHooks` 的 `shouldRestart`）。wave 没有 CC 的 `decision: "block"` 通道，
-  这条路是唯一能让**模型**读到新内容的方式，所以「第几轮 / 怎么退出」必须拼进喂回去的正文。
+- Stop hook 的「阻止停止 + 继续对话」= stdout 打 `{"decision":"block","reason":…}` 并
+  `exit 0`（`managers/hookManager.ts` 的 `extractStopBlockReason`）。与 CC 同名字段同语义；
+  `reason` 会作为一条 meta user message 注入，重开一轮。`exit 2` + stderr 那条老通道
+  仍然优先，只是本插件不再用。
 - Stop hook 的 stdin 是 JSON，其中 `last_assistant_message` 是最后一条 assistant 的纯文本，
-  所以判完成标记直接读它，**不用解析 transcript**。
+  所以判完成标记直接读它，**不用解析 transcript**。`stop_hook_active` / `permission_mode`
+  也在这个 JSON 里；本插件不依赖它们（CC 的 ralph-loop 同样不用，靠 iteration 自限）。
 - 用户按 `Esc` 中断时引擎根本不执行 Stop hook，所以「中断即停」是白送的，hook 里不需要
   写中断判据。
-- Stop hook 的 stdout 里写 `{"systemMessage": "..."}` = 在对话里给**用户**显示一行提示
-  （模型看不到，与 CC 同名字段同语义）。它和 exit 2 的 stderr 是两条互不相干的通道：
-  stderr 喂模型，`systemMessage` 给用户。老客户端整个忽略 Stop hook 的 stdout，所以这
-  一行在新老版本上都不会改变循环行为（详见「播报可见性」）。
+- 同一份 JSON 里的 `systemMessage` = 在对话里给**用户**显示一行提示（模型看不到）。
+  `reason` 给模型、`systemMessage` 给用户，两者互不干扰（详见「播报可见性」）。
 
 ## 用法
 
 > wave 里插件贡献的斜杠命令一律带插件名前缀，所以命令实际是
 > `/ralph-loop:ralph-loop` 与 `/ralph-loop:cancel-ralph`。
 >
-> 需要在支持 `${WAVE_PLUGIN_ROOT}` 与 `${WAVE_ARGUMENTS_FILE}` 的 wave 上用
-> （这两个占位符都是这次一起加的）。旧客户端上正文里的占位符不会替换，命令会
-> 直接报「读不到参数文件」，不会悄悄跑错。
+> 需要支持 `${WAVE_PLUGIN_ROOT}` 与 Stop hook `decision:block` 通道的 wave（本仓
+> 一同提交的那版 agent-sdk 起）。旧客户端上不会有隐藏的降级：`${WAVE_PLUGIN_ROOT}`
+> 不替换会直接报错，而 `decision` 不认会静默放行（循环停下、不报错）——所以别在旧版上跑。
+>
+> 想先弄明白这东西是什么、手上的活适不适合交给它：`/ralph-loop:help`（纯讲解，
+> 不启动循环、不碰项目文件）。参数细节看 `/ralph-loop:ralph-loop --help`。
 
 ### 启动
 
@@ -58,17 +67,21 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 /ralph-loop:ralph-loop <prompt> [--max-iterations N] [--completion-promise TEXT]
 ```
 
-- `<prompt>`：**第 1 轮就执行**，之后每轮原样喂回。**逐字保留**：引号、`$`、`;`、`&&`、
-  反引号、换行都不会被 shell 解析或改写 —— 参数经 `${WAVE_ARGUMENTS_FILE}` 传进脚本，
-  整段文本从头到尾不经过 shell（见文末实现说明）。
+- `<prompt>`：**第 1 轮就执行**，之后每轮原样喂回。参数像 CC 一样交给 shell 分词
+  （命令里是 `start $ARGUMENTS`，`$ARGUMENTS` 不加引号），所以：成对引号会被剥掉、
+  连续空白与换行会被折成单个空格、`$` / 反引号 / `;` / `&&` 会被 shell 当成语法
+  —— **别把这类东西写进 prompt，除非你确实想让它被 shell 处理**。要保留多行结构，
+  先把 prompt 写进文件，再用一句话让模型去读那个文件。
 - `--max-iterations N`：**总共跑 N 轮（含首个回合）**，也就是最多喂回 `N-1` 次，到点自动停。
   `0` 或不给 = 不限轮。语义与 Claude Code 的 ralph-loop 一致。同一个 flag 给多次，取最后一个（同 CC）。
 - `--completion-promise TEXT`：模型输出 `<promise>TEXT</promise>` 时循环结束（逐字比较）。
+  **TEXT 含空格时必须整体加引号**（`--completion-promise "ALL TESTS PASS"`）；不加引号只取到
+  第一个词，多出来的词会被并回 prompt 正文。
 - `--help` / `-h`：打印用法并退出，不会启动循环、不写状态文件。
 
 轮次怎么数（和 CC 对齐）：
 
-| 参数 | 总共跑 | 喂回次数 | 注入的提示行 |
+| 参数 | 总共跑 | 喂回次数 | 播报里的轮次 |
 |---|---|---|---|
 | `--max-iterations 1` | 1 轮（就这一轮，当场干活） | 0 | 无 |
 | `--max-iterations 2` | 2 轮 | 1 | 第 2 轮 |
@@ -79,16 +92,16 @@ wave 侧的关键契约（都在 `wave-agent` 的 agent-sdk 里）：
 prompt，回合结束时才被 Stop hook 拦下。所以 `--max-iterations 1` 是「跑一次活就停」，
 不会有任何回喂 —— 和 CC 一样。
 
-setup 的输出会在摘要之后空一行、**回显 prompt 原文**（与 CC 的 setup 相同），模型
-直接从命令返回里读到任务，不依赖它自己去翻上一条消息；回显的就是写进状态文件的那份
-（逐字，含引号与换行），所以「模型看到的任务」与「每轮回喂的正文」逐字一致。设了完成条件时，
-输出里还会补三行写法说明（逐字输出 `<promise>…</promise>`、没做到不许输出、
+setup 的输出会在摘要之后空一行、**回显 prompt**（与 CC 的 setup 相同，CC 是 `echo "$PROMPT"`），
+模型直接从命令返回里读到任务，不依赖它自己去翻上一条消息；回显的就是写进状态文件的那份
+（shell 分词后拼回来的词表），所以「模型看到的任务」与「每轮回喂的 `reason`」逐字一致。
+设了完成条件时，输出里还会补三行写法说明（逐字输出 `<promise>…</promise>`、没做到不许输出、
 换别的说法不算数）。
 
 例子：
 
 ```
-/ralph-loop:ralph-loop 把 tests/ 下失败的用例逐个修到 npm test 全绿 --max-iterations 8 --completion-promise ALL TESTS PASS
+/ralph-loop:ralph-loop 把 tests/ 下失败的用例逐个修到 npm test 全绿 --max-iterations 8 --completion-promise "ALL TESTS PASS"
 ```
 
 ### 取消
@@ -133,20 +146,26 @@ Ralph 循环想的是「无人值守跑 N 轮」，但**权限门仍然逐次拦
 
 ## 与 CC（Claude Code ralph-loop）的差异
 
-默认一切以 CC 为准：参数语义（N = 总回合数）、首回合就干活、`--help`/`-h`、
-重复 flag 后者覆盖、入口都是 `commands/*.md` + 内联 bash，都对齐了。下面这些是**刻意**
-不一致的地方：
+**行为**全部以 CC 为准：`{"decision":"block","reason":…}` + `exit 0` 拦停、`reason` 就是
+原始 prompt 不带前缀、`start $ARGUMENTS` 走 shell 分词、`--max-iterations N` = 总回合数、
+首回合就干活、`--help`/`-h`、重复 flag 后者覆盖、已有循环静默覆盖、未知 flag 落进 prompt、
+`--max-iterations=10` 不认（当 prompt 正文）、`.wave/` 状态文件名 `ralph-loop.local.md`、
+`commands/*.md` + 内联 bash 的入口形态。
+
+**平台约定**不跟着改（这些对齐了也没有兼容性收益）：
 
 | 差异 | 为什么 |
 |---|---|
-| 状态文件放 `<cwd>/.wave/ralph-loop.local.md`，不是 `.claude/` | `.wave/` 是 wave 自己的项目级约定目录 |
-| 支持 `--max-iterations=10` 等号形式 | 更符合 Unix 习惯；CC 的解析循环会把它当 prompt 正文（等于悄悄不设上限）。等号形式只是**多支持**一种写法，`--flag value` 的语义完全同 CC |
-| 已有循环时**拒绝启动**，要求先 `/ralph-loop:cancel-ralph` | CC 是静默覆盖状态文件，会把正在跑的循环冲掉、且不告诉你旧 prompt 丢了 |
-| 多行 prompt **原样保留换行** | CC 会把多行塌成一行，结构化 prompt（清单、代码块）会被毁掉 |
-| 拦停用 `exit 2` + stderr，不是 `{"decision":"block","reason":…}` + `exit 0` | wave 的 Stop hook 只有 exit 2 会把 stderr 喂回模型（`decision` 字段不认）。CC 那套 `exit 0` + JSON 在 wave 上等于放行，循环会静默停下。这条同时保证老客户端（≤ 1.5.1）行为与 1.1.0 完全一致 |
-| 给用户的播报是「**额外**在 stdout 打一行 `{"systemMessage": …}`」，不是与 decision 同一个 JSON 对象 | 拦停通道已经占用了 exit 2 + stderr（见上一行），所以播报只能是**另加**的一行：stdout 写 `systemMessage`，退出码与 stderr 一个字不动。CC 里两者共用一个 `{decision, reason, systemMessage}` 对象，是因为它 exit 0 拦停、不靠退出码 |
+| 状态文件在 `<cwd>/.wave/ralph-loop.local.md`，不是 `.claude/` | `.wave/` 是 wave 自己的项目级约定目录。而且格式不同（我们没有 `active: true`），路径相同也跑不通 CC 的 hook，反而会让两个插件在同一仓库里共用一份状态 |
+| 插件清单在 `.wave-plugin/plugin.json`，根占位符是 `${WAVE_PLUGIN_ROOT}` | wave 的插件格式（`${CLAUDE_PLUGIN_ROOT}` 也兼容） |
 | 命令名是 `/ralph-loop:ralph-loop` 而不是 `/ralph-loop` | wave 里插件贡献的斜杠命令一律带插件名前缀 |
-| prompt 里的引号**原样保留**（CC 按 shell 规则剥掉成对引号：`"Fix it"` → `Fix it`） | CC 的参数拼进 shell，引号是语法；wave 的参数经 `${WAVE_ARGUMENTS_FILE}` 走文件，引号就是用户写下的正文字符，剥掉反而是改用户的话 |
+
+CC 那几个「它这么做、你最好也别学」的地方，我们跟着一起学了，因为一致性比单点改进更重要：
+参数经 shell ⇒ prompt 里的引号/多行会被改写（对 CC 用户是既有事实，写法上的应对也一致：
+多行任务先落文件）；`--help` 文案里带完整 `<promise>TEXT</promise>` ⇒ 循环运行中问用法、
+被模型原样转述时理论上可能被当成完成标记（占位符 `TEXT` 只在用户真把完成标记设成
+`TEXT` 时才误判）。`scripts/self-test.mjs` 里有一条断言钉住「文案里就是完整标签」，
+免得以后有人单方面「修好」又跟 CC 不一致。
 
 ## 适合什么任务
 
@@ -163,8 +182,8 @@ Ralph 循环想的是「无人值守跑 N 轮」，但**权限门仍然逐次拦
 
 ## 状态文件
 
-`<cwd>/.wave/ralph-loop.local.md`（项目级，记得把它加进 `.gitignore`，
-文件里是「当前跑到第几轮」，不该进版本库）：
+`<cwd>/.wave/ralph-loop.local.md`（与 CC 同路径、同文件名；项目级，记得把它加进
+`.gitignore`，文件里是「当前跑到第几轮」，不该进版本库）：
 
 ```markdown
 ---
@@ -181,8 +200,9 @@ session_id: "0f3c…"
   由本会话第一次 Stop hook 认领并写回。
 - **`iteration` 的含义是「当前回合序号」，启动时写 `1`**（第 1 轮就是敲命令那个回合，
   与 CC 一致），不是「已回喂次数」。别把它当计数器从 0 起算，会让 `--max-iterations` 整体差一轮。
-- **正文是 prompt 原文**：引号、`$`、换行一字不动（参数没经过 shell，也就没有 quote
-  removal 这回事）。
+- **正文是 prompt**：shell 分词之后、用单个空格拼回来的那份（与 CC 的
+  `PROMPT_PARTS[*]` 相同）。引号已被 shell 剥掉、换行已被折平，脚本不再做二次处理
+  —— 也不该做，否则等于把 shell 已经解释过的东西再解释一遍。
 - **iteration 原子更新**：写临时文件再 `rename`，避免 hook 与命令并发时读到半个文件。
 - **脏文件即停**：`iteration` / `max_iterations` 不是非负整数、正文为空、frontmatter
   读不出来 ⇒ 删文件 + 放行。宁可停，也不要拿着看不懂的状态死循环。
@@ -191,18 +211,17 @@ session_id: "0f3c…"
 
 ## 播报可见性（谁看到哪一句）
 
-两条通道各管一头，别指望它们互换：
+一份 JSON 两个字段，各管一头，别指望它们互换：
 
 | 场景 | 用户看到 | 模型看到 |
 |---|---|---|
-| 每轮继续（`exit 2`） | stdout 的一行 `systemMessage`：`🔄 Ralph 第 N 轮 \| 想停：…` | exit 2 的 stderr：「第 N 轮提示行 + 原始 prompt」 |
-| 收尾（到上限 / 命中完成条件 / 脏文件 / hook 异常） | stdout 的一行 `systemMessage`：`Ralph 循环已结束…` | 什么也看不到（`exit 0`，正常结束这一回合） |
+| 每轮继续（`decision:block`） | `systemMessage`：`🔄 Ralph 第 N 轮 \| 想停：…` | `reason`：**原始 prompt，一字不加**（注入成一条 meta user message） |
+| 收尾（到上限 / 命中完成条件 / 脏文件 / hook 异常） | `systemMessage`：`Ralph 循环已结束…` | 什么也看不到（`exit 0`、没有 `decision`，正常结束这一回合） |
 
-- 喂回去的那条 meta user message 本身对用户仍然隐藏（`isMeta`，UI 不展示）；
-  `systemMessage` 是**另加**的一行，不是把它显示出来。
-- `systemMessage` 需要较新的 wave（Stop hook 识别 stdout 的这个字段之后）。老客户端
-  整个忽略 Stop hook 的 stdout，那些版本上的表现仍然是「播报只进 `~/.wave/logs/`
-  日志，界面上是『这一轮正常结束了』」，循环本身不受影响。
+- 注入的那条 meta user message 对用户仍然隐藏（`isMeta`，UI 不展示）；`systemMessage`
+  是**另加**的一行，不是把它显示出来。
+- 模型因此看不到「这是第几轮、还能跑几轮」——与 CC 完全一致。想让它知道，就把这类
+  信息写进 prompt 本身（它是每轮固定不变的那段话）。
 - 收尾那行同时写进了 stderr（hook 日志），所以事后也能在 `~/.wave/logs/` 里查到。
 
 ## 自测
@@ -212,13 +231,14 @@ node plugins/ralph-loop/scripts/self-test.mjs
 ```
 
 直接跑真实的 hook 与 CLI 进程（不 mock），覆盖：没有状态文件、session 不匹配、脏文件、
-到上限、完成标记命中、未命中继续（含 iteration 递增与 prompt 原样喂回）、参数经
-`--args-file` 的完整性（引号、`$`、反引号、`;`、`&&` 都不丢也不执行、多行仍保留换行、
-`$(…)` 不被当命令）、重复 flag 取最后一个、等号形式 `--max-iterations=10`、
-缺 `--args-file` 时报错、会话认领、重复启动、cancel，
+到上限、完成标记命中、未命中继续（iteration 递增、`reason` 就是原始 prompt 且不带前缀）、
+**参数解析与 CC 同一套规则**（多词用单空格拼回、引号里出现的 flag 字样不被解析、
+重复 flag 取最后一个、未知 flag 落进 prompt、`--max-iterations=10` 不认、缺值/非法值
+点名报错、空 prompt 给用法）、会话认领、**已有循环静默覆盖**、cancel，
 **与 CC 对齐的轮次语义**（`N=2` 只喂回 1 次、`N=1` 首回合就干活且零回喂、
-`--help` 不写状态文件），以及 **`systemMessage` 的播报**（continue / 收尾两路 stdout
-都是合法 JSON、轮次号对得上、没设完成条件时不出现 `<promise>`、且不影响 exit code）。
+`--help` 不写状态文件且文案里是完整 `<promise>TEXT</promise>`），以及
+**`decision` / `systemMessage` 各就各位**（继续 ⇒ `decision:block` + exit 0；
+收尾 ⇒ 只有 `systemMessage`、没有 `decision`；`stop_hook_active` 传进来也不改变行为）。
 
 用例跑在 `mkdtempSync` 建的临时目录里，整段包在 `try/finally` 中统一 `rmSync` 删除 ——
 断言失败或抛异常也不会在 `/tmp` 里留垃圾。
@@ -226,18 +246,24 @@ node plugins/ralph-loop/scripts/self-test.mjs
 ## 实现说明（参数怎么进来）
 
 入口和 CC 一样是 `commands/*.md` + 内联 bash：命令正文只做一件事 —— 把那行的输出
-（状态文件的写入结果与 prompt 回显）摆到模型面前。参数不拼进命令行，而是走文件：
+（状态文件的写入结果与 prompt 回显）摆到模型面前。参数也像 CC 一样**交给 shell**：
 
 | 环节 | 做法 |
 |---|---|
-| 参数怎么进来 | 正文写 `--args-file "${WAVE_ARGUMENTS_FILE}"`。wave 把 `$ARGUMENTS` **原文**写进一个临时文件（`0600`，命令跑完立刻删除，成功失败都删），命令里只留这个路径 |
-| 为什么走文件 | 命令行上只有一个路径词，prompt 里有什么都不影响 shell 怎么解析 —— 引号不是语法、`$` 不展开、反引号不会执行、`;` / `&&` 不会切成两条命令、多行也不会被折平；正文里有多个 `!` 命令也互不干扰（按调用各建一个文件） |
-| 脚本怎么定位自己 | `node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js"`，`${WAVE_PLUGIN_ROOT}`（以及等价的 `${CLAUDE_PLUGIN_ROOT}`）对 `commands/*.md` 正文同样生效 |
+| 参数怎么进来 | 正文写 `node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js" start $ARGUMENTS`，`$ARGUMENTS` **不加引号**（CC 的 `setup-ralph-loop.sh $ARGUMENTS` 也是不加引号的） |
+| 谁来分词 | shell。脚本拿到的是已经拆好的 argv：成对引号剥除、连续空白折叠、多行折平 —— 这正是 CC 的行为，脚本里**没有**第二套引号状态机 |
+| 脚本怎么定位自己 | `node "${WAVE_PLUGIN_ROOT}/scripts/ralph-loop.js"`，`${WAVE_PLUGIN_ROOT}`（以及等价的 `${CLAUDE_PLUGIN_ROOT}`）对 `commands/*.md` 正文生效 |
 | 权限 | 内联命令仍然过权限门，由 frontmatter 的 `allowed-tools: Bash(node *ralph-loop.js*)` 放行（命令形态固定，一条规则就够） |
 | hook 与脚本 | 一律 node，不写 bash 脚本（Windows 上 `bash` 可能解析到 WSL 的），也不依赖 `jq` / `perl` |
 
-脚本**不做** shell 的引号处理：不剥成对引号、不拆词。参数已经不是 shell 语法了，
-再模仿一次只会把用户真写的引号吃掉。
+脚本只做 flag 拆分：认识 `--max-iterations` / `--completion-promise` / `--help`，其余
+**一律当 prompt 正文**（出现未知 flag 不能把用户的任务拒掉，与 CC 相同）；剩下的词用
+单个空格拼回一句。
+
+> ⚠️ 因此 prompt 里不要出现 `;`、`&&`、`$`、反引号 —— 它们会被 shell 先解释一遍
+> （CC 上完全一样）。多行/带特殊字符的任务，先写成文件再让模型去读。
+> `--help` 的用法文案里刻意保留完整的 `<promise>TEXT</promise>`（CC 同样如此），
+> `scripts/self-test.mjs` 有一条断言钉住它，别单方面改成拆三段。
 
 ## 目录
 
@@ -252,8 +278,9 @@ ralph-loop/
 │   └── loop.js             # 判定逻辑（纯函数，自测直接覆盖）
 ├── commands/
 │   ├── ralph-loop.md       # /ralph-loop:ralph-loop
-│   └── cancel-ralph.md     # /ralph-loop:cancel-ralph
+│   ├── cancel-ralph.md     # /ralph-loop:cancel-ralph
+│   └── help.md             # /ralph-loop:help（只讲解，不启动循环）
 └── scripts/
-    ├── ralph-loop.js       # start / cancel（start 用 --args-file 读 prompt）
+    ├── ralph-loop.js       # start / cancel（start 按 argv 解析 prompt 与选项）
     └── self-test.mjs       # 自测
 ```
