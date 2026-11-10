@@ -73,6 +73,11 @@
       "name": "security-audit",
       "description": "按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动（分支 diff、PR 的 ref 对、单个提交）/ 出补丁；多 agent 扫描 + 每条发现独立复核后落盘报告，补丁由人拍板应用",
       "source": "./plugins/security-audit"
+    },
+    {
+      "name": "iflytek-skillhub",
+      "description": "接入讯飞 Astron SkillHub 技能注册中心（公有实例 skill.xfyun.cn，也支持客户私有化部署实例）：让 Agent 搜索、安装、卸载、升级技能包，技能库地址可按全局或按项目配置",
+      "source": "./plugins/iflytek-skillhub"
     }
   ]
 }

@@ -1,0 +1,5 @@
+{
+  "name": "iflytek-skillhub",
+  "description": "接入讯飞 Astron SkillHub 技能注册中心（公有实例 skill.xfyun.cn，也支持客户私有化部署实例）：让 Agent 搜索、安装、卸载、升级技能包，技能库地址可按全局或按项目配置",
+  "version": "1.0.0"
+}

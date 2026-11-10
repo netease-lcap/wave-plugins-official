@@ -20,6 +20,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **chrome-devtools** | Chrome DevTools Protocol MCP 服务器，用于浏览器自动化 |
 | **security-guidance** | 写码过程中的自动代码安全审核：逐次编辑的危险模式比对、回合结束的语义复核、提交推送前的深度复核 |
 | **security-audit** | 按需深度安全审计：skill 前门给出三件事——扫全库 / 扫改动 / 出补丁；多 agent 扫描 + 每条发现独立复核，产出报告与由人拍板的补丁 |
+| **iflytek-skillhub** | 接入讯飞 Astron SkillHub 技能注册中心（`skill.xfyun.cn`）：搜索 / 安装 / 卸载 / 升级技能包，支持客户私有化部署地址（全局或按项目配置） |
 
 ## 插件市场管理
 
@@ -83,7 +84,8 @@ wave-plugins-official/
 │   ├── typescript-lsp/       # TypeScript 语言服务器
 │   ├── chrome-devtools/      # 浏览器自动化
 │   ├── security-guidance/    # 写码过程中的自动代码安全审核
-│   └── security-audit/       # 按需深度安全审计
+│   ├── security-audit/       # 按需深度安全审计
+│   └── iflytek-skillhub/     # 讯飞 Astron SkillHub 技能注册中心接入（含私有化实例）
 ├── scripts/
 │   └── check-marketplace.mjs # 插件市场一致性自检
 └── AGENTS.md                 # 插件市场管理说明
