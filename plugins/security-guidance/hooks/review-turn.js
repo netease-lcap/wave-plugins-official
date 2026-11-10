@@ -8,7 +8,9 @@
  * does not review anything — it detects "this turn changed something that has
  * not been reviewed yet" and hands the model an instruction to do the review
  * with a subagent, together with the team's own security guidance. Nothing is
- * found ⇒ exit 0 ⇒ the model is not woken at all.
+ * found ⇒ exit 0 ⇒ the model is not woken at all. Hitting the round cap does
+ * the same: under `asyncRewake` a silent exit is the only way to hand control
+ * back, because exit code 2 always means "wake the model".
  */
 
 const {
@@ -39,6 +41,13 @@ function main() {
   if (!isGitRepo(cwd)) return;
   if (!layerEnabled(cwd, "turn")) return;
 
+  // This turn only exists because a stop hook continued the previous one.
+  // Waking the model again from here makes the hook the only thing driving the
+  // session: every wake ends in a Stop, and every Stop wakes again. Claude Code
+  // hands Stop hooks `stop_hook_active` as their circuit breaker, so honour it
+  // before counting rounds.
+  if (input.stop_hook_active === true) return;
+
   const dir = stateDir(input.session_id);
   const reviewed = readState(dir, "reviewed", {});
   const rounds = readState(dir, "rounds", { count: 0, lastAt: 0 });
@@ -53,20 +62,30 @@ function main() {
     return;
   }
 
-  if (rounds.count >= MAX_CONSECUTIVE_ROUNDS) {
-    // Hand back to the user: the review keeps finding work, so more automatic
-    // rounds are not going to converge.
-    writeState(dir, "rounds", { ...rounds, lastAt: Date.now() });
-    process.stderr.write(
-      [
-        "Security review: the last rounds kept producing changes and the automatic review has reached its limit. Stop and let the user decide whether to keep going.",
-      ].join("\n"),
-    );
-    process.exit(2);
-  }
-
   const scope = pending.slice(0, MAX_FILES);
   const truncated = pending.length - scope.length;
+
+  if (rounds.count >= MAX_CONSECUTIVE_ROUNDS) {
+    // Hand back to the user — silently. Under `asyncRewake`, exit code 2 is the
+    // wake condition, not "stop": a round that announces the cap that way is a
+    // wake-up of its own, the turn it wakes ends in another Stop, and this
+    // branch never marks anything reviewed — so the hook would wake the model
+    // forever. Record this content as reviewed (it did go through the automatic
+    // review; the conclusion is that more rounds do not converge) so the same
+    // changes cannot open another round, reset the counter, and exit 0.
+    for (const { file } of scope) {
+      const hash = fingerprint(cwd, file);
+      if (hash) reviewed[file] = hash;
+    }
+    writeState(dir, "reviewed", reviewed);
+    writeState(dir, "rounds", {
+      count: 0,
+      lastAt: Date.now(),
+      cappedAt: Date.now(),
+    });
+    return;
+  }
+
   const guidance = loadGuidance(cwd);
 
   const message = [
