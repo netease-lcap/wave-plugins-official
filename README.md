@@ -6,6 +6,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 
 | 插件 | 描述 |
 |------|------|
+| **change-ledger** | 记下这条会话改过哪些文件（增删行数、次数），并把 git 工作区的实时状态放在同一块面板里（`/changes`） |
 | **code2cwspec** | 从现有代码逆向生成为 CodeWave 格式的 spec.md + menus.md + TypeScript 实体/枚举声明文件 |
 | **code2spec** | 分析代码仓库，自动识别功能模块并生成编号规格说明文档（多智能体架构） |
 | **commit-skills** | 简化的 Git 工作流技能，支持提交、推送和创建 Pull Request |
@@ -14,6 +15,7 @@ Wave 官方插件集合，包含多种 AI 辅助开发工具、文档处理、�
 | **document-skills** | 文档处理套件，包含 Excel、Word、PowerPoint 和 PDF 处理能力 |
 | **frontend-design** | 创建独特的、生产级前端界面，避免千篇一律的 AI 审美 |
 | **playwright** | 微软的 Playwright MCP 服务器，提供浏览器自动化与端到端测试能力（截图、填表、点击、交互网页） |
+| **session-meter** | 上下文用了几成、这一场累计花了多少 token：`/ctx` 命令 + 一块面板 + 输入框下面一行百分比 |
 | **superpowers** | AI 编程助手核心技能库：TDD、调试、协作模式和成熟技巧 |
 | **tavily** | Tavily 官方 skills 集（search / extract / map / crawl / research），依赖本机 `tvly` CLI；来源为上游仓库 [tavily-ai/skills](https://github.com/tavily-ai/skills) |
 | **typescript-lsp** | TypeScript/JavaScript 语言服务器，提供代码智能提示 |
@@ -73,6 +75,7 @@ wave-plugins-official/
 ├── .wave-plugin/
 │   └── marketplace.json      # 插件市场注册表
 ├── plugins/
+│   ├── change-ledger/        # 会话改动记录 + git 工作区面板（mod）
 │   ├── code2cwspec/          # 代码转 CodeWave 规范
 │   ├── code2spec/            # 代码转规格说明
 │   ├── commit-skills/        # Git 工作流技能
@@ -81,6 +84,7 @@ wave-plugins-official/
 │   ├── document-skills/      # 文档处理套件
 │   ├── frontend-design/      # 前端界面设计
 │   ├── playwright/           # 浏览器自动化 / 端到端测试
+│   ├── session-meter/        # 上下文 / token 用量面板（mod）
 │   ├── typescript-lsp/       # TypeScript 语言服务器
 │   ├── chrome-devtools/      # 浏览器自动化
 │   ├── security-guidance/    # 写码过程中的自动代码安全审核
