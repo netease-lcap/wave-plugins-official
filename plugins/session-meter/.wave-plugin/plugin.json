@@ -1,0 +1,5 @@
+{
+  "name": "session-meter",
+  "description": "上下文用了几成、这一场累计花了多少 token：/ctx 命令 + 一块面板 + 输入框下面一行百分比",
+  "version": "1.0.0"
+}

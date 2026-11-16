@@ -1,0 +1,5 @@
+{
+  "name": "change-ledger",
+  "description": "记下这条会话改过哪些文件（增删行数、次数），并把 git 工作区的实时状态放在同一块面板里",
+  "version": "1.0.0"
+}
